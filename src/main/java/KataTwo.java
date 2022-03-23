@@ -1,6 +1,6 @@
 import java.util.stream.Stream;
 
-public class Kata {
+public class KataTwo {
 
     private static class StringScore implements Comparable<StringScore> {
 
