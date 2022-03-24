@@ -1,4 +1,4 @@
-public class Kata
+public class KataThree
 {
     public static char findMissingLetter(char[] array)
     {
