@@ -13,3 +13,9 @@ It was a wierd experience to get my head around, but fun to code!
 I had fun with the [Binomial Expansion](/src/main/java/KataSolution.java).  
 Most difficult was doing the vector multiplication and resolution, 
 but the second was getting the output format right !!! 
+
+## Simple Assembler
+These one is multipart.  It starts [simple](https://www.codewars.com/kata/58e24788e24ddee28e000053),
+but there's a [second part](https://www.codewars.com/kata/assembler-interpreter-part-ii/),
+which sounds more challenging!
+So we start with the [simple assembler](/src/main/java/SimpleAssembler.java).
