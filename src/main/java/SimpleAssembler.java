@@ -1,3 +1,5 @@
+import java.util.HashMap;
+//import java.util.HashSet;
 import java.util.Map;
 
 /**
@@ -50,6 +52,40 @@ import java.util.Map;
  */
 public class SimpleAssembler {
     public static Map<String, Integer> interpret(String[] program){
-        return null;
+        // HashSet<Integer> debug = new HashSet<>();
+        Map<String, Integer> registers = new HashMap<>();
+        int nextInstruction = 0;
+        while (nextInstruction < program.length){
+            // read instruction and move on pointer
+            String [] parts = program[nextInstruction++].split(" ");
+            final String opCode = parts[0];
+            final String register = parts[1];
+            final String parameter = (parts.length > 2) ? parts[2] : "";
+            // if (debug.add(nextInstruction-1)) System.err.println("" + (nextInstruction-1) + ": " + opCode + " " + register + " " + parameter);
+            switch (opCode) { // action part
+                case "mov" -> registers.put(register, getValue(registers, parameter));
+                case "inc" -> registers.put(register, getValue(registers, register) + 1);
+                case "dec" -> registers.put(register, getValue(registers, register) - 1);
+                case "jnz" -> {
+                    if (getValue(registers, register) != 0)
+                        nextInstruction += getValue(registers, parameter) - 1;
+                }
+            }
+        }
+        // System.err.println(registers);
+        return registers;
     }
+
+    private static int getValue(Map<String, Integer> registers, String parameter) {
+        int value = 0; // if register not yet set assume it is 0
+        try {
+            // check for a constant
+            value = Integer.parseInt(parameter);
+        } catch (NumberFormatException nfe){
+            // else must be a register
+            value = registers.getOrDefault(parameter, value);
+        }
+        return value;
+    }
+
 }

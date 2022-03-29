@@ -14,8 +14,12 @@ I had fun with the [Binomial Expansion](/src/main/java/KataSolution.java).
 Most difficult was doing the vector multiplication and resolution, 
 but the second was getting the output format right !!! 
 
-## Simple Assembler
-These one is multipart.  It starts [simple](https://www.codewars.com/kata/58e24788e24ddee28e000053),
+## Simple Assembler?
+These one is multipart.  It starts [simple](https://www.codewars.com/kata/simple-assembler-interpreter/),
 but there's a [second part](https://www.codewars.com/kata/assembler-interpreter-part-ii/),
 which sounds more challenging!
+### Part 1: Simple Assembler
 So we start with the [simple assembler](/src/main/java/SimpleAssembler.java).
+To discover where I was going wrong, I added some debug (now commented out)
+to "spy" on the hidden tests that were failing and so create extra tests
+to cover them.  This is the [final test suite](/src/test/java/SimpleAssemblerTest.java) I used.
