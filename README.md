@@ -18,8 +18,13 @@ but the second was getting the output format right !!!
 These one is multipart.  It starts [simple](https://www.codewars.com/kata/simple-assembler-interpreter/),
 but there's a [second part](https://www.codewars.com/kata/assembler-interpreter-part-ii/),
 which sounds more challenging!
+
 ### Part 1: Simple Assembler
-So we start with the [simple assembler](/src/main/java/SimpleAssembler.java).
+So we start with the [Simple Assembler](/src/main/java/SimpleAssembler.java).
 To discover where I was going wrong, I added some debug (now commented out)
 to "spy" on the hidden tests that were failing and so create extra tests
 to cover them.  This is the [final test suite](/src/test/java/SimpleAssemblerTest.java) I used.
+
+### Part 2: Assembler Interpreter
+So we will complete the [Assembler Interpreter](/src/main/java/AssemblerInterpreter.java).
+And test it with the [test suite](/src/test/java/AssemblerInterpreterTest.java)
