@@ -28,3 +28,10 @@ to cover them.  This is the [final test suite](/src/test/java/SimpleAssemblerTes
 ### Part 2: Assembler Interpreter
 So we will complete the [Assembler Interpreter](/src/main/java/AssemblerInterpreter.java).
 And test it with the [test suite](/src/test/java/AssemblerInterpreterTest.java)
+
+## Closest pair of points in linearithmic time
+For my next trick: [Closest pair of points in linearithmic time](https://www.codewars.com/kata/5376b901424ed4f8c20002b7).  
+This will get me into the dark realm of computer science and big O notation.  See the Wikipedia entry for the 
+[Closest pair of points problem](https://en.wikipedia.org/wiki/Closest_pair_of_points_problem)!
+Solution (if I find it) will be [Closest Pair], along with their provided class of [Point](src/main/java/Point.java), 
+and my version of [their test suite](src/test/java/ClosestPairTest.java).
