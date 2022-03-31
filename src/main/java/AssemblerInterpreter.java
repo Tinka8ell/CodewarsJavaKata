@@ -121,26 +121,184 @@ public class AssemblerInterpreter {
 
     private static List<List<String>> code;
     private static Map<String, Integer> labels;
+    private static Map<String, Integer> registers;
 
     public static String interpret(final String input) {
         // Convert input into "machine code"
         assemble(input);
         // Run the code
-        String result = null;
+        StringBuilder result = new StringBuilder(); // empty the output
+        registers = new HashMap<>(); // clear registers to start
+        Stack<Integer> stack = new Stack<>(); // clear out stack
+        int condition = 0; // default to equal
         int pointer = 0;
         boolean finished = false;
-        while (!finished){
+        while (!finished  && pointer < code.size()){
             // run the code
             // get the instruction and move pointer to 'next'
             List<String> instruction = code.get(pointer++);
             String opCode = instruction.get(0);
             // action opcode
             switch (opCode){
+                case "mov" -> {
+                    // mov x, y - copy y (either an integer or the value of a register) into register x.
+                    String x = instruction.get(1);
+                    String y = instruction.get(2);
+                    setRegister(x, getValue(y));
+                }
+                case "inc" -> {
+                    // inc x - increase the content of register x by one.
+                    String x = instruction.get(1);
+                    setRegister(x, getValue(x) + 1);
+                }
+                case "dec" -> {
+                    // dec x - decrease the content of register x by one.
+                    String x = instruction.get(1);
+                    setRegister(x, getValue(x) - 1);
+                }
+                case "add" -> {
+                    // add x, y - add the content of the register x with y (either an integer or the value of a register)
+                    //    and stores the result in x (i.e. register[x] += y).
+                    String x = instruction.get(1);
+                    String y = instruction.get(2);
+                    setRegister(x, getValue(x) + getValue(y));
+                }
+                case "sub" -> {
+                    // sub x, y - subtract y (either an integer or the value of a register)
+                    //    from the register x and stores the result in x (i.e. register[x] -= y).
+                    String x = instruction.get(1);
+                    String y = instruction.get(2);
+                    setRegister(x, getValue(x) - getValue(y));
+                }
+                case "mul" -> {
+                    // mul x, y - same with multiply (i.e. register[x] *= y).
+                    String x = instruction.get(1);
+                    String y = instruction.get(2);
+                    setRegister(x, getValue(x) * getValue(y));
+                }
+                case "div" -> {
+                    // div x, y - same with integer division (i.e. register[x] /= y).
+                    String x = instruction.get(1);
+                    String y = instruction.get(2);
+                    setRegister(x, getValue(x) / getValue(y));
+                }
+                case "jmp" -> {
+                    // jmp lbl - jumps to the label lbl.
+                    String label = instruction.get(1);
+                    pointer = labels.get(label);
+                }
+                case "cmp" -> {
+                    // cmp x, y - compares x (either an integer or the value of a register)
+                    //    and y (either an integer or the value of a register).
+                    //    The result is used in the conditional jumps (jne, je, jge, jg, jle and jl)
+                    String x = instruction.get(1);
+                    String y = instruction.get(2);
+                    condition = getValue(x) - getValue(y); // <0 , 0 or >0
+                }
+                case "jne" -> {
+                    // jne lbl - jump to the label lbl if the values of the previous cmp command were not equal.
+                    String label = instruction.get(1);
+                    if (condition != 0)
+                        pointer = labels.get(label);
+                }
+                case "je" -> {
+                    // je lbl - jump to the label lbl if the values of the previous cmp command were equal.
+                    String label = instruction.get(1);
+                    if (condition == 0)
+                        pointer = labels.get(label);
+                }
+                case "jge" -> {
+                    // jge lbl - jump to the label lbl if x was greater or equal than y in the previous cmp command.
+                    String label = instruction.get(1);
+                    if (condition >= 0)
+                        pointer = labels.get(label);
+                }
+                case "jg" -> {
+                    // jg lbl - jump to the label lbl if x was greater than y in the previous cmp command.
+                    String label = instruction.get(1);
+                    if (condition > 0)
+                        pointer = labels.get(label);
+                }
+                case "jle" -> {
+                    // jle lbl - jump to the label lbl if x was less or equal than y in the previous cmp command.
+                    String label = instruction.get(1);
+                    if (condition <= 0)
+                        pointer = labels.get(label);
+                }
+                case "jl" -> {
+                    // jl lbl - jump to the label lbl if x was less than y in the previous cmp command.
+                    String label = instruction.get(1);
+                    if (condition < 0)
+                        pointer = labels.get(label);
+                }
+                case "call" -> {
+                    // call lbl - call to the subroutine identified by lbl.
+                    //    When a ret is found in a subroutine,
+                    //    the instruction pointer should return to the instruction next to this call command.
+                    String label = instruction.get(1);
+                    stack.push(pointer);
+                    pointer = labels.get(label);
+                }
+                case "ret" -> {
+                    // ret - when a ret is found in a subroutine,
+                    //    the instruction pointer should return to the instruction that called the current function.
+                    Integer newPointer = stack.pop(); // just in case ret without call and so nothing on stack
+                    pointer = (newPointer == null) ? code.size() : newPointer; // if nothing then end the program
+                }
+                case "msg" -> {
+                    // msg 'Register: ', x - this instruction stores the output of the program.
+                    //    It may contain text strings (delimited by single quotes) and registers.
+                    //    The number of arguments isn't limited and will vary, depending on the program.
+                    for (int i = 1; i < instruction.size(); i++) {
+                        String parameter = instruction.get(i);
+                        Integer value = getValue(parameter);
+                        result.append( (value == null) ?
+                                parameter :
+                                Integer.toString(value));
+                    }
+                }
+                case "end" -> {
+                    // end - this instruction indicates that the program ends correctly,
+                    //    so the stored output is returned
+                    finished = true; // should be enough, but just in case ...
+                    pointer = code.size(); // end the program
+                }
 
             }
         }
         // Output the fine result
-        return result;
+        return (finished) ? result.toString() : null;
+    }
+
+    /**
+     * Set the register 'x' from the value of 'y'.
+     * 'x' must be a register name, 'y' is an integer
+     *
+     * @param x String value for left-hand parameter
+     * @param y integer
+     */
+    private static void setRegister(String x, int y) {
+        registers.put(x, y);
+    }
+
+    /**
+     * Get the value represented by 'y'.
+     * 'y' can be a register name, or an integer constant
+     * if 'y' is unknown String return null
+     *
+     * @param y String value for right-hand parameter
+     * @return int value that is represented
+     */
+    private static Integer getValue(String y) {
+        Integer value = null;
+        try {
+            // check for a constant
+            value = Integer.parseInt(y);
+        } catch (NumberFormatException nfe){
+            // else must be a register
+            value = registers.getOrDefault(y, value);
+        }
+        return value;
     }
 
     private static void assemble(final String input) {
@@ -150,8 +308,7 @@ public class AssemblerInterpreter {
                     return (pos != -1) ? s.substring(0, pos) : s;
                 })
                 .map(String::strip)
-                .filter(str -> str.trim().length() > 0)
-                .collect(Collectors.toList());
+                .filter(str -> str.trim().length() > 0).toList();
         code = new ArrayList<>();
         labels = new HashMap<>();
         for (String line: lines) {
@@ -168,7 +325,7 @@ public class AssemblerInterpreter {
             else {
                 opCode = line.substring(0, pos);
                 line =  line.substring(pos).trim();
-                pos = line.indexOf('\'');
+                pos = line.indexOf("'");
                 if (pos != -1){
                     // have at least one string so must be message format
                     // must check is "'" is first ig this is still true ....
@@ -177,9 +334,9 @@ public class AssemblerInterpreter {
                     for (int i = 0; i < alternates.length; i++) {
                         if (i % 2 == 0){
                             // even - non-strings
-                            parameters.addAll(Arrays.stream(line.split(","))
+                            parameters.addAll(Arrays.stream(alternates[i].split(","))
                                     .map(String::trim)
-                                    .collect(Collectors.toList()));
+                                    .filter(str -> !str.isEmpty()).toList());
                         }
                         else {
                             //odd - string
