@@ -140,112 +140,129 @@ public class AssemblerInterpreter {
             String opCode = instruction.get(0);
             // action opcode
             switch (opCode){
-                case "mov" -> {
+                case "mov": {
                     // mov x, y - copy y (either an integer or the value of a register) into register x.
                     String x = instruction.get(1);
                     String y = instruction.get(2);
                     setRegister(x, getValue(y));
+                    break;
                 }
-                case "inc" -> {
+                case "inc": {
                     // inc x - increase the content of register x by one.
                     String x = instruction.get(1);
                     setRegister(x, getValue(x) + 1);
+                    break;
                 }
-                case "dec" -> {
+                case "dec": {
                     // dec x - decrease the content of register x by one.
                     String x = instruction.get(1);
                     setRegister(x, getValue(x) - 1);
+                    break;
                 }
-                case "add" -> {
+                case "add": {
                     // add x, y - add the content of the register x with y (either an integer or the value of a register)
                     //    and stores the result in x (i.e. register[x] += y).
                     String x = instruction.get(1);
                     String y = instruction.get(2);
                     setRegister(x, getValue(x) + getValue(y));
+                    break;
                 }
-                case "sub" -> {
+                case "sub": {
                     // sub x, y - subtract y (either an integer or the value of a register)
                     //    from the register x and stores the result in x (i.e. register[x] -= y).
                     String x = instruction.get(1);
                     String y = instruction.get(2);
                     setRegister(x, getValue(x) - getValue(y));
+                    break;
                 }
-                case "mul" -> {
+                case "mul": {
                     // mul x, y - same with multiply (i.e. register[x] *= y).
                     String x = instruction.get(1);
                     String y = instruction.get(2);
                     setRegister(x, getValue(x) * getValue(y));
+                    break;
                 }
-                case "div" -> {
+                case "div": {
                     // div x, y - same with integer division (i.e. register[x] /= y).
                     String x = instruction.get(1);
                     String y = instruction.get(2);
                     setRegister(x, getValue(x) / getValue(y));
+                    break;
                 }
-                case "jmp" -> {
+                case "jmp": {
                     // jmp lbl - jumps to the label lbl.
                     String label = instruction.get(1);
                     pointer = labels.get(label);
+                    break;
                 }
-                case "cmp" -> {
+                case "cmp": {
                     // cmp x, y - compares x (either an integer or the value of a register)
                     //    and y (either an integer or the value of a register).
                     //    The result is used in the conditional jumps (jne, je, jge, jg, jle and jl)
                     String x = instruction.get(1);
                     String y = instruction.get(2);
                     condition = getValue(x) - getValue(y); // <0 , 0 or >0
+                    break;
                 }
-                case "jne" -> {
+                case "jne": {
                     // jne lbl - jump to the label lbl if the values of the previous cmp command were not equal.
                     String label = instruction.get(1);
                     if (condition != 0)
                         pointer = labels.get(label);
+                    break;
                 }
-                case "je" -> {
+                case "je": {
                     // je lbl - jump to the label lbl if the values of the previous cmp command were equal.
                     String label = instruction.get(1);
                     if (condition == 0)
                         pointer = labels.get(label);
+                    break;
                 }
-                case "jge" -> {
+                case "jge": {
                     // jge lbl - jump to the label lbl if x was greater or equal than y in the previous cmp command.
                     String label = instruction.get(1);
                     if (condition >= 0)
                         pointer = labels.get(label);
+                    break;
                 }
-                case "jg" -> {
+                case "jg": {
                     // jg lbl - jump to the label lbl if x was greater than y in the previous cmp command.
                     String label = instruction.get(1);
                     if (condition > 0)
                         pointer = labels.get(label);
+                    break;
                 }
-                case "jle" -> {
+                case "jle": {
                     // jle lbl - jump to the label lbl if x was less or equal than y in the previous cmp command.
                     String label = instruction.get(1);
                     if (condition <= 0)
                         pointer = labels.get(label);
+                    break;
                 }
-                case "jl" -> {
+                case "jl": {
                     // jl lbl - jump to the label lbl if x was less than y in the previous cmp command.
                     String label = instruction.get(1);
                     if (condition < 0)
                         pointer = labels.get(label);
+                    break;
                 }
-                case "call" -> {
+                case "call": {
                     // call lbl - call to the subroutine identified by lbl.
                     //    When a ret is found in a subroutine,
                     //    the instruction pointer should return to the instruction next to this call command.
                     String label = instruction.get(1);
                     stack.push(pointer);
                     pointer = labels.get(label);
+                    break;
                 }
-                case "ret" -> {
+                case "ret": {
                     // ret - when a ret is found in a subroutine,
                     //    the instruction pointer should return to the instruction that called the current function.
                     Integer newPointer = stack.pop(); // just in case ret without call and so nothing on stack
                     pointer = (newPointer == null) ? code.size() : newPointer; // if nothing then end the program
+                    break;
                 }
-                case "msg" -> {
+                case "msg": {
                     // msg 'Register: ', x - this instruction stores the output of the program.
                     //    It may contain text strings (delimited by single quotes) and registers.
                     //    The number of arguments isn't limited and will vary, depending on the program.
@@ -256,12 +273,14 @@ public class AssemblerInterpreter {
                                 parameter :
                                 Integer.toString(value));
                     }
+                    break;
                 }
-                case "end" -> {
+                case "end": {
                     // end - this instruction indicates that the program ends correctly,
                     //    so the stored output is returned
                     finished = true; // should be enough, but just in case ...
                     pointer = code.size(); // end the program
+                    break;
                 }
 
             }
@@ -308,7 +327,7 @@ public class AssemblerInterpreter {
                     return (pos != -1) ? s.substring(0, pos) : s;
                 })
                 .map(String::strip)
-                .filter(str -> str.trim().length() > 0).toList();
+                .filter(str -> str.trim().length() > 0).collect(Collectors.toList());
         code = new ArrayList<>();
         labels = new HashMap<>();
         for (String line: lines) {
@@ -336,7 +355,7 @@ public class AssemblerInterpreter {
                             // even - non-strings
                             parameters.addAll(Arrays.stream(alternates[i].split(","))
                                     .map(String::trim)
-                                    .filter(str -> !str.isEmpty()).toList());
+                                    .filter(str -> !str.isEmpty()).collect(Collectors.toList()));
                         }
                         else {
                             //odd - string
