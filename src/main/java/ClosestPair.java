@@ -37,6 +37,18 @@ import java.util.List;
  * The goal is to come up with a function that can find two closest points for any arbitrary array of points, in a linearithmic time.
  *
  * Point class is provided for us.
+ *
+ * Implementation Notes:
+ * Looking on the wiki, I will try this approach for set 'S' of points:
+ * Khuller & Matias (1995) goes through two phases:
+ * Repeat the following steps, until 'S' becomes empty:
+ *   Choose a point 'p' uniformly at random from 'S'
+ *   Compute the distances from 'p' to all the other points of 'S' and let 'd' be the minimum such distance
+ *   Round the input points to a square grid of size 'd' / 2, and delete from 'S' all points whose
+ *      "Moore neighborhood" has no other points
+ * "Moore neighborhood" is the 8 grid squares that surround a grid square
+ * The final value of 'd' before 'S' becomes entry is the shortest distance and the contenss of 'S' with be the pair!
+ *
  */
 public class ClosestPair {
     public static List<Point> closestPair(List<Point> points) {
