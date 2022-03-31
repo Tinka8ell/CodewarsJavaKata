@@ -13,7 +13,7 @@ import java.util.List;
  * 3                . D
  * 4                   . F
  * 5             . C
- * 6              
+ * 6
  * 7                . E
  * 8    . B
  * 9                   . G
