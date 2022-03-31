@@ -1,4 +1,5 @@
-import java.util.*;
+import java.util.Arrays;
+import java.util.TreeMap;
 import java.util.stream.IntStream;
 
 public class Smaller {
@@ -6,24 +7,16 @@ public class Smaller {
     public static int[] smaller(int[] unsorted) {
         int len = unsorted.length;
         int[] counted = new int[len];
-        TreeMap<Integer, Integer> smallerToRight = new TreeMap<>();
-        // work from right end
-        for (int p = unsorted.length - 1; p >= 0; p--) {
+        TreeMap<Integer, Integer> toRight =  new TreeMap<>();
+        for (int p = len - 1; p >= 0; p--) {
             int value = unsorted[p];
-            Integer key = smallerToRight.floorKey(value);
-            int count = 0;
-            if (key != null) {
-                if (key == value) {
-                    // match so use it
-                    count = smallerToRight.get(key);
-                } else {
-                    count = smallerToRight.get(key) + 1; // add the one found to those right of it
-                    smallerToRight.put(value, count); // and add new key
-                }
-            } else {
-                smallerToRight.put(value, 0); // nothing smaller yet
-            }
-            counted[p] = count;
+            counted[p] = toRight
+                    .keySet()
+                    .stream()
+                    .filter(i -> i < value)
+                    .map(toRight::get)
+                    .reduce(0, Integer::sum);
+            toRight.put(value, toRight.getOrDefault(value, 0) + 1);
         }
         return counted;
     }
