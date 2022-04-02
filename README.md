@@ -35,3 +35,9 @@ This will get me into the dark realm of computer science and big O notation.  Se
 [Closest pair of points problem](https://en.wikipedia.org/wiki/Closest_pair_of_points_problem)!
 Solution (if I find it) will be [Closest Pair], along with their provided class of [Point](src/main/java/Point.java), 
 and my version of [their test suite](src/test/java/ClosestPairTest.java).
+
+## Symbolic differentiation of prefix expressions
+This one looks fascinating and challenging to say the least.  
+[Symbolic differentiation of prefix expressions](https://www.codewars.com/kata/584daf7215ac503d5a0001ae) requires both
+the differentiation of expressions, but also the rationalisation of expressions before and after differentiation. 
+The [PrefixDiff class](/src/main/java/PrefixDiff.java) will do the work, but for now just a shell with documentation.
