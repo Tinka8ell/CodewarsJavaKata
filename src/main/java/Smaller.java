@@ -12,21 +12,25 @@ public class Smaller {
         TreeMap<Integer, Integer> toRight =  new TreeMap<>();
         for (int p = len - 1; p >= 0; p--) {
             int key = unsorted[p];
-            Map.Entry<Integer, Integer> next = toRight.floorEntry(key);
             int value = 0;
+            Map.Entry<Integer, Integer> next = toRight.floorEntry(key);
             if (next != null) {
-                Integer match = next.getValue();
-                value = lessThan[match]; // get all smaller than the match one
-                if (key == next.getKey()) { //
-                    equal[p] = 1 + equal[match]; // keep a tally of matching items
+                int nextPos = next.getValue();
+                int nextKey = next.getKey();
+                if (key == nextKey) { //
+                    equal[p] = 1 + equal[nextPos]; // keep a tally of matching items
                 } else {
-                    // count the match and any that match it
-                    value += 1 + equal[match];
+                    // count the nextPos and any that nextPos it
+                    value += 1 + equal[nextPos];
                 }
-                // count any we skipped to get to match
-                for (int q = p + 1; q < match; q++){
-                    if (unsorted[q] < key)
-                        value++;
+                // count any we skipped to get to nextPos
+                next = toRight.lowerEntry(nextKey);
+                while (next != null) {
+                    int last = nextPos;
+                    nextPos = next.getValue();
+                    value += 1 + equal[nextPos]; // count it and it's
+                    nextKey = next.getKey();
+                    next = toRight.lowerEntry(nextKey);
                 }
             }
             lessThan[p] = value;
