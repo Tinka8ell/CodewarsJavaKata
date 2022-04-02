@@ -1,4 +1,5 @@
 import java.util.Arrays;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.IntStream;
 
@@ -6,19 +7,32 @@ public class Smaller {
 
     public static int[] smaller(int[] unsorted) {
         int len = unsorted.length;
-        int[] counted = new int[len];
+        int[] lessThan = new int[len];
+        int[] equal = new int[len];
         TreeMap<Integer, Integer> toRight =  new TreeMap<>();
         for (int p = len - 1; p >= 0; p--) {
-            int value = unsorted[p];
-            counted[p] = toRight
-                    .keySet()
-                    .stream()
-                    .filter(i -> i < value)
-                    .map(toRight::get)
-                    .reduce(0, Integer::sum);
-            toRight.put(value, toRight.getOrDefault(value, 0) + 1);
+            int key = unsorted[p];
+            Map.Entry<Integer, Integer> next = toRight.floorEntry(key);
+            int value = 0;
+            if (next != null) {
+                Integer match = next.getValue();
+                value = lessThan[match]; // get all smaller than the match one
+                if (key == next.getKey()) { //
+                    equal[p] = 1 + equal[match]; // keep a tally of matching items
+                } else {
+                    // count the match and any that match it
+                    value += 1 + equal[match];
+                }
+                // count any we skipped to get to match
+                for (int q = p + 1; q < match; q++){
+                    if (unsorted[q] < key)
+                        value++;
+                }
+            }
+            lessThan[p] = value;
+            toRight.put(key, p);
         }
-        return counted;
+        return lessThan;
     }
 
     public static int[] oldSmaller(int[] unsorted) {
