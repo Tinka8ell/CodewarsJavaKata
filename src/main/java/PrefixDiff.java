@@ -90,6 +90,110 @@ import java.util.List;
  */
 class PrefixDiff {
 
+    /**
+     * Represent the prefix notation
+     */
+    public static class Expression {
+        private String function;
+        private Expression left;
+        private Expression right;
+
+        /**
+         * Create an expression representing either:
+         * a variable (usually "x") or
+         * a constant (may be a long or a double)
+         *
+         * @param variable as a String
+         */
+        public Expression(String variable) {
+            this(variable, null, null);
+        }
+
+        /**
+         * Create an expression representing a function with a single operand
+         *
+         * @param function a lowercase String name of the function
+         * @param left an expression representing the only parameter
+         */
+        public Expression(String function, Expression left) {
+            this(function, left, null);
+        }
+
+        /**
+         * Create an expression representing a binary operator
+         * with two arguments left and right as some operators are ordered (e.g. '-', '/' & '^')
+         *
+         * @param function a single character String for the operator
+         * @param left an expression representing the first parameter
+         * @param right an expression representing the second parameter
+         */
+        public Expression(String function, Expression left, Expression right) {
+            this.function = function;
+            this.left = left;
+            this.right = right;
+        }
+
+        public static Expression parse(String expression){
+                expression = expression.replaceAll("\\(]", " \\( ")
+                        .replaceAll("\\)]", " \\) ")
+                        .replaceAll("  +]", " ");
+                List<String> parts = Arrays.asList(expression.split(" "));
+            List<Expression> result = new ArrayList<>();
+            List<String> op = new ArrayList<>();
+            List<Integer> expected = new ArrayList<>();
+            List<Object> arg = new ArrayList<>();
+            int depth = -1;
+            while (parts.size() > 0) {
+                String part = parts.remove(0);
+                switch (part) {
+                    case "(": {
+                        depth++;
+                        break;
+                    }
+                    case ")": {
+                        int count = expected.remove(0);
+                        Object right = null;
+                        if (count > 0) {
+                            right = arg.remove(0);
+                            count--;
+                        }
+                        Object left = null;
+                        if (count > 0) {
+                            left = arg.remove(0);
+                            count--;
+                        }
+                        arg.add(0, new Expression(op.remove(0), (Expression) left, (Expression) right));
+                        break;
+                    }
+                    case "+":
+                    case "-":
+                    case "*":
+                    case "/":
+                    case "^":{
+                        op.add(0, part);
+                        expected.add(0, 2);
+                        break;
+                    }
+                    case "sin":
+                    case "cos":
+                    case "tan":
+                    case "exp":
+                    case "ln": {
+                        op.add(0, part);
+                        expected.add(0, 1);
+                        break;
+                    }
+                    default: { // variable or constant
+                        op.add(0, part);
+                        expected.add(0, 0);
+                        break;
+                    }
+                }
+            }
+            return (Expression) arg.remove(0);
+        }
+    }
+
     public String diff(String expr) {
 
         // Method required, return the resulting expression as String
