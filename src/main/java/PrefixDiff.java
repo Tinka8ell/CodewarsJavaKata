@@ -97,6 +97,7 @@ class PrefixDiff {
         private String function;
         private Expression left;
         private Expression right;
+        private Double constant;
 
         /**
          * Create an expression representing either:
@@ -131,6 +132,12 @@ class PrefixDiff {
             this.function = function;
             this.left = left;
             this.right = right;
+            constant = null;
+            try {
+                constant = Double.parseDouble(this.function);
+            } catch (NumberFormatException e){
+                constant = null;
+            }
         }
 
         public static Expression parse(String expression){
@@ -191,6 +198,118 @@ class PrefixDiff {
                 }
             }
             return (Expression) arg.remove(0);
+        }
+
+        public boolean isConstant() {
+            return (constant != null);
+        }
+
+        public boolean isMultiple() {
+            return isConstant() ||
+                    ( (function == "*") &&
+                            left.isConstant() &&
+                            right.isFunction()
+                    );
+        }
+
+        public boolean isFunction() {
+            return isName() ||
+                    ( (function == "^") &&
+                            left.isName() &&
+                            right.isSum()
+                    );
+        }
+
+        public double ofOrder(){
+            double order = 0;
+            if (!isConstant()){
+                if (isSum())
+                    order = left.ofOrder(); // lowest order multiple
+                else if (isMultiple())
+                        order = right.ofOrder(); // order of function part
+            }
+            return order;
+        }
+
+        public String ofName(){
+            String name = "";
+            if (!isConstant()){
+                if ("+-/*^".indexOf(function) != -1){
+                    name = function; // a variable
+                    if (left != null)
+                        name = "(" + function + " " + left.ofName() + ")"; // a function
+                } else if (isMultiple()){
+                    name = right.ofName();
+                } else if (function == "*"){ // a product
+                    name = "(* " + left.ofName() + " " + right.ofName() + ")";
+                } else {
+                    name = left.ofName(); // of first argument
+                    if (name.isEmpty())
+                        name = right.ofName(); // of second
+                    else if (right.ofName() != name)
+                        name = "(+ " + name + " " + right.ofName() + ")"; // of both
+                }
+            }
+            return name;
+        }
+
+        public boolean isName() {
+            return !isConstant() ||
+                    ( (function == "*") &&
+                            left.isName() &&
+                            right.isName() // should really be isName or named sum!
+                    );
+        }
+
+        public boolean isSum(){
+            return isMultiple() ||
+                    ( (function == "+") && 
+                            left.isMultiple() && 
+                            right.isSum()
+                    );
+        }
+
+        /**
+         * Simplify the expressions.
+         * A simplified expression is basically an ordered sum of multiples:
+         *
+         * sum = <multiple> | '(' '+' <multiple> <sum> ')' and is of order of the multiple
+         * multiple = <constant> | '(' * <constant> <function> ')' and is of order of the function
+         * constant is nonzero number (Long, Double) and is of order 0
+         * function = <name> | '(' '^' <name> <sum> ')' and is of order sum
+         * name = <named function> | <product>
+         * product = '(' * <named function> <named function> ')'
+         * named function = <variable name> | '(' <'cos' | 'sin' | 'tan' | 'exp' | 'ln'> <variable sum> ')'
+         * variable name = 'x' - basically the unitary function on 'x'
+         * variable sum = a sum containing a variable name
+         *
+         * multiples are "ordered" by their name and order of the power ('^') they are raised to
+         * 
+         * zero constants remove themselves and any multiple they are part of
+         * powers of 1 can be folded to the name they represent
+         * product of two equal <named function> is '(' '^' <named function> '2' ')'  
+         * '-' is not commutative so: 
+         *   '(' '-' <arg1> <arg2> ')' 
+         * becomes: 
+         *   '(' '+' <arg1> <minus multiple> ')' were 
+         *   minus multiple = '(' '*' '-1' <arg2> ')'
+         * '/' is not commutative so: 
+         *   '(' '/' <arg1> <arg2> ')' 
+         * becomes: 
+         *   '(' '*' <arg1> <negative power> ')' were 
+         *   negative power = '(' '^' <arg2> '-1' ')'
+         */
+        public void simplify(){
+            // remove the non-commutative operators we need to be commutative
+            if (function == "-"){
+                function = "+";
+                right = new Expression("*", new Expression("-1"), right);
+            }
+            if (function == "/"){
+                function = "*";
+                right = new Expression("^", right, new Expression("-1"));
+            }
+
         }
     }
 
