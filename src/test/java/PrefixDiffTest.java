@@ -12,12 +12,32 @@ class PrefixDiffTest {
     }
 
     @Test
+    public void testVariable(){
+        PrefixDiff diff = new PrefixDiff();
+        assertEquals("1", diff.diff("x"), "x should return 1");
+    }
+
+    @Test
+    public void testSums(){
+        PrefixDiff diff = new PrefixDiff();
+        assertEquals("0", diff.diff("(+ 10 10)"), "10+10 should return 0");
+        assertEquals("1", diff.diff("(+ x 10)"), "x+10 should return 1");
+        assertEquals("1", diff.diff("(+ 10 x)"), "10+x should return 1");
+        assertEquals("1", diff.diff("(- x 10)"), "x-10 should return 1");
+        assertEquals("1", diff.diff("(- 10 x)"), "10-x should return -1");
+        assertEquals("2", diff.diff("(+ x x)"), "x+x should return 2");
+        assertEquals("0", diff.diff("(- x x)"), "x-x should return 0");
+        assertEquals("3", diff.diff("(+ x (+ x x))"), "x+x+x should return 3");
+        assertEquals("3", diff.diff("(+ (+ x x) x)"), "x+x+x should return 3");
+    }
+
+    @Test
     @Disabled
     public void SimpleTests() {
         PrefixDiff diff = new PrefixDiff();
 
         assertEquals("0", diff.diff("5"), "constant should return 0");
-        assertEquals(diff.diff("x"), "x should return 1", "1");
+        assertEquals("1", diff.diff("x"), "x should return 1");
         assertEquals("2", diff.diff("(+ x x)"), "x+x should return 2");
         assertEquals("0", diff.diff("(- x x)"), "x-x should return 0");
         assertEquals("2", diff.diff("(* x 2)"), "2*x should return 2");

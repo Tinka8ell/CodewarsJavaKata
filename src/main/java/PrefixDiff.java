@@ -108,7 +108,7 @@ class PrefixDiff {
         private static final Function ONE = new Function("1");
 
         private String name;
-        private int parts;
+        private boolean isSimple = true;
         private Function left;
         private Function right;
         private Double constant;
@@ -142,6 +142,7 @@ class PrefixDiff {
             name = action; // constant or variable
             left = leftPart;
             opType = OpType.CHAIN;
+            isSimple = false;
         }
 
         /**
@@ -168,52 +169,60 @@ class PrefixDiff {
                 default: // "^"
                     opType = OpType.CHAIN;
             }
+            isSimple = false;
+        }
+
+        private static Character getNext(List<Character> rest) {
+            return rest.size() > 0 ? rest.remove(0) : ')';
+        }
+
+        private static Character getNextNoneBlank(List<Character> rest) {
+            Character test = getNext(rest);
+            while (test == ' ')
+                test = getNext(rest);// skip blanks
+            return test;
+        }
+
+        private static String getNextWord(List<Character> rest) {
+            Character test = getNextNoneBlank(rest);
+            while (test == ' ')
+                test = getNext(rest);// skip blanks
+            StringBuilder word = new StringBuilder();
+            while (test != ' ' && test != ')'){
+                word.append(test);
+                test = getNext(rest);
+            }
+            // as we aren't using it, put it back!
+            rest.add(0, test);
+            return word.toString();
         }
 
         public static Function parse(List<Character> rest) {
-            Character test = rest.remove(0);
-            while (test == ' ')
-                test = rest.remove(0);// skip blanks
+            Character test = getNextNoneBlank(rest);
             if (test == '(') {
                 // starting an expression
-                while (test == ' ')
-                    test = rest.remove(0);// skip blanks
-                // swallow the word
-                StringBuilder word = new StringBuilder();
-                while (test != ' '){
-                    word.append(test);
-                    test = rest.remove(0);
-                }
-                // test is a ' ' and word is our action
-                String action = word.toString();
-                if ( (action.length() == 1) && ("+-*/^".indexOf(action) != -1) ){
+                String action = getNextWord(rest);
+                if (action.length() == 1) {
+                    if ("+-*/^".indexOf(action) != -1) {
+                        // has two arguments and closing ket
+                        Function leftPart = Function.parse(rest);
+                        Function rightPart = Function.parse(rest);
+                        while (test != ')') // lazy as starts as '(' ...
+                            test = getNext(rest);// skip to end ket
+                        return new Function(action, leftPart, rightPart);
+                    } else {
+                        // we have wrapped variable or constant so unwrap it
+                        return parse(rest);
+                    }
+                } else {
+                    // otherwise, it is a function with one argument
                     Function leftPart = Function.parse(rest);
-                    Function rightPart = Function.parse(rest);
-                    while (test != ')')
-                        test = rest.remove(0);// skip to end ket
-                    rest.add(0, test);
-                    return new Function(action, leftPart, rightPart);
+                    return new Function(action, leftPart);
                 }
-                // otherwise, it is a function with one argument
-                Function leftPart = Function.parse(rest);
-                while (test != ')')
-                    test = rest.remove(0);// skip to end ket
-                rest.add(0, test);
-                return new Function(action, leftPart);
-            }
-            else {
+            } else {
                 // got a var or const
-                // swallow the word
-                StringBuilder word = new StringBuilder();
-                while (test != ' '){
-                    word.append(test);
-                    if (rest.size() > 0)
-                        test = rest.remove(0);
-                    else
-                        test = ' ';
-                }
-                // test is a ' ' and word is our action
-                String action = word.toString();
+                rest.add(0, test); // put test back so we can read it as a word...
+                String action = getNextWord(rest);
                 return new Function(action);
             }
         }
@@ -227,8 +236,18 @@ class PrefixDiff {
                     return "( " + name + " " + left.toString() + " )";
                 }
             } else {
-                return "( " + name + " " + left.toString() + " " + right.toString() + " )";
+                if (left == null){
+                    return "( " + name + " " + right.toString() + " )";
+                } else {
+                    return "( " + name + " " + left.toString() + " " + right.toString() + " )";
+                }
             }
+        }
+
+        private String getNumber(Double number) {
+            if (number == number.longValue())
+                return Long.toString(number.longValue());
+            return number.toString();
         }
 
         /**
@@ -260,18 +279,77 @@ class PrefixDiff {
          * becomes: 
          *   '(' '*' <arg1> <negative power> ')' were 
          *   negative power = '(' '^' <arg2> '-1' ')'
+         *
+         * @return simplified function
          */
-        public void simplify(){
-            // remove the non-commutative operators we need to be commutative
-            if (name == "-"){
-                name = "+";
-                right = new Function("*", new Function("-1"), right);
-            }
-            if (name == "/"){
-                name = "*";
-                right = new Function("^", right, new Function("-1"));
-            }
+        public Function simplify(){
+            // short circuit if we can
+            if (isSimple)
+                return this;
 
+            // not so simple so at least normalise
+            if (left == null)
+                left = ZERO;
+            else if (!left.isSimple)
+                left = left.simplify();
+            if (right == null)
+                right = ZERO;
+            else if (!right.isSimple)
+                right = right.simplify();
+
+            // now go deeper
+            Function simple = this;
+            switch (opType){
+                /* these are already excluded
+                case NAME:
+                case CONSTANT:
+                    // as simple as it gets
+                    break;
+                 */
+                case SUM:
+                    if (right.opType == OpType.CONSTANT){
+                        if (left.opType == OpType.CONSTANT){
+                            // if sum of two numbers, then do the arithmetic
+                            double result = right.constant;
+                            if (name.equals("-"))
+                                result = - result;
+                            result += left.constant;
+                            simple = new Function(getNumber(result));
+                        } else if (name.equals("+")){
+                            // else put constant first
+                            Function swap = right;
+                            right = left;
+                            left = swap;
+                        }
+                    }
+                    if (left.opType == OpType.CONSTANT && left.constant == 0)
+                        simple = right; // adding 0 does nothing!
+                    break;
+                case PRODUCT:
+                    // similar to sum
+                    if (right.opType == OpType.CONSTANT){
+                        if (left.opType == OpType.CONSTANT){
+                            // if product of two numbers, then do the arithmetic
+                            double result = left.constant * right.constant;
+                            simple = new Function(getNumber(result));
+                        } else if (name.equals("+")){
+                            // else put constant first
+                            Function swap = right;
+                            right = left;
+                            left = swap;
+                        }
+                        if (left.opType == OpType.CONSTANT && left.constant == 0)
+                            simple = right; // adding 0 does nothing!
+                    }
+                    if (left.opType == OpType.CONSTANT) {
+                        if (left.constant == 0)
+                            simple = ZERO; // nothing times anything is nothing!
+                        else if (left.constant == 1)
+                            simple = right; // one times something is just something!
+                    }
+                    break;
+            }
+            return simple;
         }
 
         /**
@@ -308,15 +386,17 @@ class PrefixDiff {
          * Cosine:      cos(x) -> -sin(x)
          * Tangent:     tan(x) -> 1 / cos^2(x)
          *
-         * @return differentiated function or null if there is nothing left
+         * @return differentiated function
          */
         public Function differentiate (){
             Function diff = null;
             switch (opType){
                 case CONSTANT: // a number
-                    return ZERO; // end of the line
+                    diff = ZERO; // end of the line
+                    break;
                 case NAME: // a variable
-                    return ONE; // replace with a one
+                    diff = ONE; // replace with a one
+                    break;
                 case CHAIN: // a real function
                     // Derivative chain rule
                     //   f(g(x))' = f'(g(x))∙g'(x)
@@ -332,9 +412,15 @@ class PrefixDiff {
                             newLeft = new Function("*", right, newRight);
                             break;
                     }
-                    return new Function("*", newLeft, left.differentiate() );
+                    diff = new Function("*", newLeft, left.differentiate() );
+                    break;
+                case SUM: // a sum
+                    // Sum rule:
+                    //   ( a.f(x) + b.g(x) ) ' = a.f'(x) + b.g'(x)
+                    // remember to keep the name (+ / -)!
+                    diff = new Function(name, left.differentiate(), right.differentiate() );
             }
-            return diff;
+            return diff.simplify();
         }
     }
 
