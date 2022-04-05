@@ -1,6 +1,6 @@
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Symbolic differentiation of prefix expressions
@@ -90,183 +90,145 @@ import java.util.List;
  */
 class PrefixDiff {
 
+    public enum OpType{
+        CONSTANT, // a number
+        NAME, // a variable name
+        SUM, // + / - two values
+        PRODUCT, // * two values
+        QUOTIENT, // / two values
+        CHAIN // function of function
+    }
+
     /**
      * Represent the prefix notation
      */
-    public static class Expression {
-        private String function;
-        private Expression left;
-        private Expression right;
+    public static class Function {
+        private static final Function MINUS_ONE = new Function("-1");
+        private static final Function ZERO = new Function("0");
+        private static final Function ONE = new Function("1");
+
+        private String name;
+        private int parts;
+        private Function left;
+        private Function right;
         private Double constant;
+        private OpType opType;
 
         /**
-         * Create an expression representing either:
-         * a variable (usually "x") or
-         * a constant (may be a long or a double)
+         * Create an end node of the function tree
+         * This is a constant or a variable name (probably 'x')
          *
-         * @param variable as a String
+         * @param action a String name or a number as a String
          */
-        public Expression(String variable) {
-            this(variable, null, null);
-        }
-
-        /**
-         * Create an expression representing a function with a single operand
-         *
-         * @param function a lowercase String name of the function
-         * @param left an expression representing the only parameter
-         */
-        public Expression(String function, Expression left) {
-            this(function, left, null);
-        }
-
-        /**
-         * Create an expression representing a binary operator
-         * with two arguments left and right as some operators are ordered (e.g. '-', '/' & '^')
-         *
-         * @param function a single character String for the operator
-         * @param left an expression representing the first parameter
-         * @param right an expression representing the second parameter
-         */
-        public Expression(String function, Expression left, Expression right) {
-            this.function = function;
-            this.left = left;
-            this.right = right;
-            constant = null;
+        public Function(String action){
+            name = action; // constant or variable
             try {
-                constant = Double.parseDouble(this.function);
-            } catch (NumberFormatException e){
-                constant = null;
+                constant = Double.parseDouble(action);
+                opType = OpType.CONSTANT;
+            }
+            catch (NumberFormatException e){
+                // it wasn't a number
+                opType = OpType.NAME;
             }
         }
 
-        public static Expression parse(String expression){
-                expression = expression.replaceAll("\\(]", " \\( ")
-                        .replaceAll("\\)]", " \\) ")
-                        .replaceAll("  +]", " ");
-                List<String> parts = Arrays.asList(expression.split(" "));
-            List<Expression> result = new ArrayList<>();
-            List<String> op = new ArrayList<>();
-            List<Integer> expected = new ArrayList<>();
-            List<Object> arg = new ArrayList<>();
-            int depth = -1;
-            while (parts.size() > 0) {
-                String part = parts.remove(0);
-                switch (part) {
-                    case "(": {
-                        depth++;
-                        break;
-                    }
-                    case ")": {
-                        int count = expected.remove(0);
-                        Object right = null;
-                        if (count > 0) {
-                            right = arg.remove(0);
-                            count--;
-                        }
-                        Object left = null;
-                        if (count > 0) {
-                            left = arg.remove(0);
-                            count--;
-                        }
-                        arg.add(0, new Expression(op.remove(0), (Expression) left, (Expression) right));
-                        break;
-                    }
-                    case "+":
-                    case "-":
-                    case "*":
-                    case "/":
-                    case "^":{
-                        op.add(0, part);
-                        expected.add(0, 2);
-                        break;
-                    }
-                    case "sin":
-                    case "cos":
-                    case "tan":
-                    case "exp":
-                    case "ln": {
-                        op.add(0, part);
-                        expected.add(0, 1);
-                        break;
-                    }
-                    default: { // variable or constant
-                        op.add(0, part);
-                        expected.add(0, 0);
-                        break;
-                    }
+        /**
+         * Create a function that takes one argument
+         *
+         * @param action name of the function
+         * @param leftPart a function for the one argument
+         */
+        public Function(String action, Function leftPart){
+            name = action; // constant or variable
+            left = leftPart;
+            opType = OpType.CHAIN;
+        }
+
+        /**
+         * Create an expression combining two arguments
+         * For commutative operations the two arguments can be swapped
+         *
+         * @param action the operation code
+         * @param leftPart the argument the operation is applied to
+         * @param rightPart the argument that is applied in the operation
+         */
+        public Function(String action, Function leftPart, Function rightPart){
+            name = action;
+            left = leftPart;
+            right = rightPart;
+            switch (action){
+                case "+":
+                case "-":
+                    opType = OpType.SUM;
+                    break;
+                case "*":
+                case "/":
+                    opType = OpType.PRODUCT;
+                    break;
+                default: // "^"
+                    opType = OpType.CHAIN;
+            }
+        }
+
+        public static Function parse(List<Character> rest) {
+            Character test = rest.remove(0);
+            while (test == ' ')
+                test = rest.remove(0);// skip blanks
+            if (test == '(') {
+                // starting an expression
+                while (test == ' ')
+                    test = rest.remove(0);// skip blanks
+                // swallow the word
+                StringBuilder word = new StringBuilder();
+                while (test != ' '){
+                    word.append(test);
+                    test = rest.remove(0);
                 }
+                // test is a ' ' and word is our action
+                String action = word.toString();
+                if ( (action.length() == 1) && ("+-*/^".indexOf(action) != -1) ){
+                    Function leftPart = Function.parse(rest);
+                    Function rightPart = Function.parse(rest);
+                    while (test != ')')
+                        test = rest.remove(0);// skip to end ket
+                    rest.add(0, test);
+                    return new Function(action, leftPart, rightPart);
+                }
+                // otherwise, it is a function with one argument
+                Function leftPart = Function.parse(rest);
+                while (test != ')')
+                    test = rest.remove(0);// skip to end ket
+                rest.add(0, test);
+                return new Function(action, leftPart);
             }
-            return (Expression) arg.remove(0);
-        }
-
-        public boolean isConstant() {
-            return (constant != null);
-        }
-
-        public boolean isMultiple() {
-            return isConstant() ||
-                    ( (function == "*") &&
-                            left.isConstant() &&
-                            right.isFunction()
-                    );
-        }
-
-        public boolean isFunction() {
-            return isName() ||
-                    ( (function == "^") &&
-                            left.isName() &&
-                            right.isSum()
-                    );
-        }
-
-        public double ofOrder(){
-            double order = 0;
-            if (!isConstant()){
-                if (isSum())
-                    order = left.ofOrder(); // lowest order multiple
-                else if (isMultiple())
-                        order = right.ofOrder(); // order of function part
+            else {
+                // got a var or const
+                // swallow the word
+                StringBuilder word = new StringBuilder();
+                while (test != ' '){
+                    word.append(test);
+                    if (rest.size() > 0)
+                        test = rest.remove(0);
+                    else
+                        test = ' ';
+                }
+                // test is a ' ' and word is our action
+                String action = word.toString();
+                return new Function(action);
             }
-            return order;
         }
 
-        public String ofName(){
-            String name = "";
-            if (!isConstant()){
-                if ("+-/*^".indexOf(function) != -1){
-                    name = function; // a variable
-                    if (left != null)
-                        name = "(" + function + " " + left.ofName() + ")"; // a function
-                } else if (isMultiple()){
-                    name = right.ofName();
-                } else if (function == "*"){ // a product
-                    name = "(* " + left.ofName() + " " + right.ofName() + ")";
+        @Override
+        public String toString() {
+            if (right == null){
+                if (left == null){
+                    return name;
                 } else {
-                    name = left.ofName(); // of first argument
-                    if (name.isEmpty())
-                        name = right.ofName(); // of second
-                    else if (right.ofName() != name)
-                        name = "(+ " + name + " " + right.ofName() + ")"; // of both
+                    return "( " + name + " " + left.toString() + " )";
                 }
+            } else {
+                return "( " + name + " " + left.toString() + " " + right.toString() + " )";
             }
-            return name;
-        }
-
-        public boolean isName() {
-            return !isConstant() ||
-                    ( (function == "*") &&
-                            left.isName() &&
-                            right.isName() // should really be isName or named sum!
-                    );
-        }
-
-        public boolean isSum(){
-            return isMultiple() ||
-                    ( (function == "+") && 
-                            left.isMultiple() && 
-                            right.isSum()
-                    );
         }
 
         /**
@@ -301,23 +263,109 @@ class PrefixDiff {
          */
         public void simplify(){
             // remove the non-commutative operators we need to be commutative
-            if (function == "-"){
-                function = "+";
-                right = new Expression("*", new Expression("-1"), right);
+            if (name == "-"){
+                name = "+";
+                right = new Function("*", new Function("-1"), right);
             }
-            if (function == "/"){
-                function = "*";
-                right = new Expression("^", right, new Expression("-1"));
+            if (name == "/"){
+                name = "*";
+                right = new Function("^", right, new Function("-1"));
             }
 
         }
+
+        /**
+         * Differentiate the given function
+         *
+         * Derivation follows these rule:
+         * Sum rule:
+         *   ( a.f(x) + b.g(x) ) ' = a.f'(x) + b.g'(x)
+         *
+         * Product rule:
+         *   ( f(x)∙g(x) ) ' = f'(x).g(x) + f(x).g'(x)
+         *
+         * Derivative quotient rule
+         *   ( f(x)/g(x) )' = ( f'(x).g(x) - f(x).g'(x) )/g^2(x)
+         *
+         * Derivative chain rule
+         *   f(g(x))' = f'(g(x))∙g'(x)
+         *
+         *  Actually:
+         *   ( f(x)/g(x) )' = ( f(x).(g(x)^-1) )'
+         *  product rule so = f'(x).(g(x)^-1) + f(x).(g(x)^-1)'
+         *  chain rule   so = f'(x).(g(x)^-1) + f(x).( -1.(g(x))^-2 ).(g'(x))
+         *  reorder      or = f'(x).g(x).(g(x)^-2) - f(x).g'(x).(g(x)^-2)
+         *               or = (f'(x).g(x) - f(x)g'(x)).(g(x)^-2)
+         *                  = (f'(x).g(x) - f(x).g'(x))/g^2(x)
+         *
+         * with the following arithmetic rules:
+         * Constant:    const -> 0
+         * Linear:      x     -> 1
+         * Power:       x^a   -> a.x^(a-1)
+         * Exponential: e^x -> e^x
+         * Natural log: ln(x) -> 1/x
+         * Sine:        sin(x) -> cos(x)
+         * Cosine:      cos(x) -> -sin(x)
+         * Tangent:     tan(x) -> 1 / cos^2(x)
+         *
+         * @return differentiated function or null if there is nothing left
+         */
+        public Function differentiate (){
+            Function diff = null;
+            switch (opType){
+                case CONSTANT: // a number
+                    return ZERO; // end of the line
+                case NAME: // a variable
+                    return ONE; // replace with a one
+                case CHAIN: // a real function
+                    // Derivative chain rule
+                    //   f(g(x))' = f'(g(x))∙g'(x)
+                    // f -> name (with right), g -> left
+                    //   f(g(x))' -> new name = "*", new left = f'(g(x)), new right = g'(x)
+                    Function newLeft = null; //f'(g(x))
+                    switch (name){ // derive left
+                        case "^": // to a power: x^a   -> a.x^(a-1)
+                            // x = left, a = right
+                            // => (* a (^ x, (+ a -1)))
+                            Function newPower = new Function("+", right, MINUS_ONE);
+                            Function newRight = new Function("^", left, newPower);
+                            newLeft = new Function("*", right, newRight);
+                            break;
+                    }
+                    return new Function("*", newLeft, left.differentiate() );
+            }
+            return diff;
+        }
     }
 
+    private static  Pattern starter = Pattern.compile("^[ (]+(.*)$"); // start expressions characters
+    private static  Pattern ender = Pattern.compile("^[ )]+(.*)$"); // end expression characters
+    private static  Pattern argument = Pattern.compile("^([^ ()]+)(.*)$"); // argument characters
+    private static  Pattern expressionPattern = Pattern.compile("^ *\\( *([-+/*^a-z0-9]+)(.*) *\\) *$");
+    private static  Pattern constantPattern = Pattern.compile("^ *([a-z0-9]+)(.*) *$");
+    private static  Pattern variablePattern = Pattern.compile("^ *([a-z]+)(.*) *$");
+
+    /**
+     * Starting from f(x) generate f'(x).
+     *
+     * f(x) is in th form of:
+     *   constant, variable name (expect "x") or an expression :
+     *   "(" [" "] <action> [ " " <expression> [ " " <expression> ] ] [" "] ")"
+     * where action is function keyword, and operator or variable name (expect "x")
+     * so matches regex: "[a-z0-9+-*^/]+" - lowercase alpha, digit or op symbols
+     * " " - spaces separate everywhere they are required and
+     * bra and ket ("(", ")") are always paired.  What could go wrong!
+     *
+     * @param expr String representing of f(x)
+     * @return String representing of f'(x)
+     */
     public String diff(String expr) {
-
-        // Method required, return the resulting expression as String
-
-        return "";
+        // parse it
+        Function function = Function.parse(expr.chars().mapToObj(e -> (char)e).collect(Collectors.toList()));
+        // differentiate
+        function = function.differentiate();
+        // return to string
+        return function.toString();
     }
 }
 
