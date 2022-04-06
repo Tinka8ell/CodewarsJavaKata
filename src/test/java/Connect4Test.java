@@ -50,6 +50,47 @@ class Connect4Test {
         assertEquals(expected, response, "Should return: '" + expected + "' after '" + moves + "'");
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "Player 1 has a turn, 3",
+            "Player 2 has a turn, 30",
+            "Player 1 has a turn, 301",
+            "Player 2 has a turn, 3010",
+            "Player 1 has a turn, 30101",
+            "Player 2 has a turn, 301010",
+            "Player 1 has a turn, 3010101",
+            "Player 2 wins!, 30101010"})
+    void test2(String expected, String moves) {
+        String response = "";
+        for (int move: moves.toCharArray()) {
+            response = game.play(move - '0');
+        }
+        assertEquals(expected, response, "Should return: '" + expected + "' after '" + moves + "'");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "Player 1 has a turn, 0",
+            "Player 2 has a turn, 00",
+            "Player 1 has a turn, 001",
+            "Player 2 has a turn, 0011",
+            "Player 1 has a turn, 00112",
+            "Player 2 has a turn, 001122",
+            "Player 1 wins!, 0011223"})
+    void testHorizontal(String expected, String moves) {
+        String response = "";
+        for (int move: moves.toCharArray()) {
+            response = game.play(move - '0');
+        }
+        assertEquals(expected, response, "Should return: '" + expected + "' after '" + moves + "'");
+    }
+
+    @Test
+    void testContinueAfterVerticalFinish() {
+        int[] moves = new int[] { 1, 2, 1, 2, 1, 2, 1, 2 };
+        runTheTest(moves, "Game has finished!");
+    }
+
     @Test
     void testContinueAfterFinish() {
         int[] moves = new int[] { 1, 1, 2, 2, 3, 3, 4, 4 };
