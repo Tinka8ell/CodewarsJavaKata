@@ -322,8 +322,9 @@ class PrefixDiff {
                             left = swap;
                         }
                     }
-                    if (left.opType == OpType.CONSTANT && left.constant == 0)
-                        simple = right; // adding 0 does nothing!
+                    if (simple == this)
+                        if (left.opType == OpType.CONSTANT && left.constant == 0)
+                            simple = right; // adding 0 does nothing!
                     break;
                 case PRODUCT:
                     // similar to sum
@@ -332,21 +333,22 @@ class PrefixDiff {
                             // if product of two numbers, then do the arithmetic
                             double result = left.constant * right.constant;
                             simple = new Function(getNumber(result));
-                        } else if (name.equals("+")){
+                        } else {
                             // else put constant first
                             Function swap = right;
                             right = left;
                             left = swap;
                         }
-                        if (left.opType == OpType.CONSTANT && left.constant == 0)
-                            simple = right; // adding 0 does nothing!
+                        if (simple == this)
+                            if (left.opType == OpType.CONSTANT && left.constant == 0)
+                                simple = ZERO; // 0 time anything is nothing!
                     }
-                    if (left.opType == OpType.CONSTANT) {
-                        if (left.constant == 0)
-                            simple = ZERO; // nothing times anything is nothing!
-                        else if (left.constant == 1)
-                            simple = right; // one times something is just something!
-                    }
+                    if (simple == this)
+                        if (left.opType == OpType.CONSTANT)
+                            if (left.constant == 0)
+                                simple = ZERO; // nothing times anything is nothing!
+                            else if (left.constant == 1)
+                                simple = right; // one times something is just something!
                     break;
             }
             return simple;
@@ -397,28 +399,36 @@ class PrefixDiff {
                 case NAME: // a variable
                     diff = ONE; // replace with a one
                     break;
-                case CHAIN: // a real function
-                    // Derivative chain rule
-                    //   f(g(x))' = f'(g(x))∙g'(x)
-                    // f -> name (with right), g -> left
-                    //   f(g(x))' -> new name = "*", new left = f'(g(x)), new right = g'(x)
-                    Function newLeft = null; //f'(g(x))
-                    switch (name){ // derive left
-                        case "^": // to a power: x^a   -> a.x^(a-1)
-                            // x = left, a = right
-                            // => (* a (^ x, (+ a -1)))
-                            Function newPower = new Function("+", right, MINUS_ONE);
-                            Function newRight = new Function("^", left, newPower);
-                            newLeft = new Function("*", right, newRight);
-                            break;
-                    }
-                    diff = new Function("*", newLeft, left.differentiate() );
-                    break;
                 case SUM: // a sum
                     // Sum rule:
                     //   ( a.f(x) + b.g(x) ) ' = a.f'(x) + b.g'(x)
                     // remember to keep the name (+ / -)!
                     diff = new Function(name, left.differentiate(), right.differentiate() );
+                    break;
+                case PRODUCT: // a product
+                    // Product rule:
+                    //    ( f(x)∙g(x) ) ' = f'(x).g(x) + f(x).g'(x)
+                    Function newLeft = new Function("*", left.differentiate(), right);
+                    Function newRight = new Function("*", left, right.differentiate());
+                    diff = new Function("+", newLeft, newRight);
+                    break;
+                case CHAIN: // a real function
+                    // Derivative chain rule
+                    //   f(g(x))' = f'(g(x))∙g'(x)
+                    // f -> name (with right), g -> left
+                    //   f(g(x))' -> new name = "*", new left = f'(g(x)), new right = g'(x)
+                    Function newLeft2 = null; //f'(g(x))
+                    switch (name){ // derive left
+                        case "^": // to a power: x^a   -> a.x^(a-1)
+                            // x = left, a = right
+                            // => (* a (^ x, (+ a -1)))
+                            Function newPower = new Function("+", right, MINUS_ONE);
+                            Function newRight2 = new Function("^", left, newPower);
+                            newLeft2 = new Function("*", right, newRight2);
+                            break;
+                    }
+                    diff = new Function("*", newLeft2, left.differentiate() );
+                    break;
             }
             return diff.simplify();
         }

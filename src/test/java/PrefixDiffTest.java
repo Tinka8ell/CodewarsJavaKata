@@ -24,11 +24,19 @@ class PrefixDiffTest {
         assertEquals("1", diff.diff("(+ x 10)"), "x+10 should return 1");
         assertEquals("1", diff.diff("(+ 10 x)"), "10+x should return 1");
         assertEquals("1", diff.diff("(- x 10)"), "x-10 should return 1");
-        assertEquals("1", diff.diff("(- 10 x)"), "10-x should return -1");
+        assertEquals("-1", diff.diff("(- 10 x)"), "10-x should return -1");
         assertEquals("2", diff.diff("(+ x x)"), "x+x should return 2");
         assertEquals("0", diff.diff("(- x x)"), "x-x should return 0");
         assertEquals("3", diff.diff("(+ x (+ x x))"), "x+x+x should return 3");
         assertEquals("3", diff.diff("(+ (+ x x) x)"), "x+x+x should return 3");
+    }
+
+    @Test
+    public void testProduct(){
+        PrefixDiff diff = new PrefixDiff();
+        assertEquals("2", diff.diff("(* x 2)"), "2*x should return 2");
+        assertEquals("2", diff.diff("(* 2 x)"), "x*2 should return 2");
+        assertEquals("(* 2 x)", diff.diff("(* x x)"), "x*x should return 2x");
     }
 
     @Test
