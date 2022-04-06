@@ -1,15 +1,25 @@
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class Connect4Test {
+
+    private Connect4 game;
+
+    @BeforeEach
+    public void setup(){
+        game = new Connect4();
+    }
 
     // verifies the response for every move
     void runTheTest(int[] moves, String[] expected) {
         Connect4 game = new Connect4();
         for (int i = 0; i < moves.length; i++) {
             String response = game.play(moves[i]);
-            assertEquals(expected[i], response, "Should return: '" + expected + "'");
+            assertEquals(expected[i], response, "Should return: '" + expected[i] + "'");
         }
     }
 
@@ -23,12 +33,21 @@ class Connect4Test {
         assertEquals(lastExpected, response, "Should return: '" + lastExpected + "'");
     }
 
-    @Test
-    void test1() {
-        int[] moves = { 0, 1, 0, 1, 0, 1, 0 };
-        String[] expectedResponses = { "Player 1 has a turn", "Player 2 has a turn", "Player 1 has a turn",
-                "Player 2 has a turn", "Player 1 has a turn", "Player 2 has a turn", "Player 1 wins!" };
-        runTheTest(moves, expectedResponses);
+    @ParameterizedTest
+    @CsvSource({
+            "Player 1 has a turn, 0",
+            "Player 2 has a turn, 01",
+            "Player 1 has a turn, 010",
+            "Player 2 has a turn, 0101",
+            "Player 1 has a turn, 01010",
+            "Player 2 has a turn, 010101",
+            "Player 1 wins!, 0101010"})
+    void test1(String expected, String moves) {
+        String response = "";
+        for (int move: moves.toCharArray()) {
+            response = game.play(move - '0');
+        }
+        assertEquals(expected, response, "Should return: '" + expected + "' after '" + moves + "'");
     }
 
     @Test
