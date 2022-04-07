@@ -14,22 +14,13 @@ class Connect4Test {
         game = new Connect4();
     }
 
-    // verifies the response for every move
-    void runTheTest(int[] moves, String[] expected) {
-        Connect4 game = new Connect4();
-        for (int i = 0; i < moves.length; i++) {
-            String response = game.play(moves[i]);
-            assertEquals(expected[i], response, "Should return: '" + expected[i] + "'");
-        }
-    }
-
     // verifies the response after the last move
     void runTheTest(int[] moves, String lastExpected) {
-        Connect4 game = new Connect4();
         String response = null;
-        for (int i = 0; i < moves.length; i++) {
-            response = game.play(moves[i]);
+        for (int move : moves) {
+            response = game.play(move);
         }
+        // System.out.println(game);
         assertEquals(lastExpected, response, "Should return: '" + lastExpected + "'");
     }
 
@@ -98,9 +89,67 @@ class Connect4Test {
     }
 
     @Test
+    void testContinueVerticalWin() {
+        int[] moves = new int[] { 1, 2, 1, 2, 1, 2, 1};
+        runTheTest(moves, "Player 1 wins!");
+    }
+
+    @Test
+    void testContinueHorizontalWin() {
+        int[] moves = new int[] { 1, 1, 2, 2, 3, 3, 4};
+        runTheTest(moves, "Player 1 wins!");
+    }
+
+    @Test
+    void testContinueUpWin() { // r  y  r  y  r  y  r  y  r  y  r
+        int[] moves = new int[] { 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4};
+        runTheTest(moves, "Player 1 wins!");
+    }
+
+    @Test
+    void testContinueDownWin(){ //r  y  r  y  r  y  r  y  r  y  r
+        int[] moves = new int[] { 2, 1, 1, 1, 1, 2, 2, 2, 4, 3, 3};
+        runTheTest(moves, "Player 1 wins!");
+    }
+
+    @Test
     void testFullColumn() {
         int[] moves = new int[] { 4, 4, 4, 4, 4, 4, 4 };
         runTheTest(moves, "Column full!");
+    }
+
+    @Test
+    void testWin1() { //          r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r
+        int[] moves = new int[] { 3, 3, 3, 2, 4, 2, 2, 4, 4, 0, 6, 3, 4, 3, 4, 4, 2, 3, 6, 0, 0, 0, 6, 6, 0, 0, 2, 2, 6, 6, 5 };
+        runTheTest(moves, "Player 1 wins!");
+    }
+
+    @Test
+    void testWin2() { //          r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r
+        int[] moves = new int[] { 3, 3, 4, 2, 3, 2, 4, 4, 5, 6, 3, 4, 0, 4, 4, 3, 0, 1, 1, 2, 2};
+        //                        334232445634044301122
+        runTheTest(moves, "Player 1 wins!");
+    }
+
+    @Test
+    void testWin3() { //          r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r
+        int[] moves = new int[] { 2, 2, 1, 3, 1, 1, 0, 3, 0, 4, 0, 0};
+        //
+        runTheTest(moves, "Player 2 wins!");
+    }
+
+    @Test
+    void testWin4() { //          r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r
+        int[] moves = new int[] { 2, 5, 4, 6, 3, 6, 1};
+        //
+        runTheTest(moves, "Player 1 wins!");
+    }
+
+    @Test
+    void testWin5() { //          r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r  y  r
+        int[] moves = new int[] { 2, 1, 5, 0, 2, 4, 6, 0, 4, 2, 6, 6, 4, 1, 1, 3, 0, 5, 5, 2, 3};
+        //
+        runTheTest(moves, "Player 1 has a turn");
     }
 
 }

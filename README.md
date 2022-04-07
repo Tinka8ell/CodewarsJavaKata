@@ -37,10 +37,10 @@ the kata! Worked out a way to shortcut the power calculation, especially for the
 the 1000000th Fibonacci number is:
 ok I will add it at the end ... it is very long ...
 
-# Yet to complete:
-
 ## Connect 4
 I love the game ones, so I am doing the [Connect4 Kata](https://www.codewars.com/kata/586c0909c1923fdb89002031).
+
+# Yet to complete:
 
 ## Closest pair of points in linearithmic time
 For my next trick: [Closest pair of points in linearithmic time](https://www.codewars.com/kata/5376b901424ed4f8c20002b7).  
