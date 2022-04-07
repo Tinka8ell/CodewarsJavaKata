@@ -46,152 +46,188 @@ import java.util.*;
  *   Round the input points to a square grid of size 'd' / 2, and delete from 'S' all points whose
  *      "Moore neighborhood" has no other points
  * "Moore neighborhood" is the 8 grid squares that surround a grid square
- * The final value of 'd' before 'S' becomes entry is the shortest distance and the contenss of 'S' with be the pair!
+ * The final value of 'd' before 'S' becomes entry is the shortest distance and the contents of 'S' with be the pair!
  *
  */
 public class ClosestPair {
+
+    private static final Random random = new Random();
+    private double shortest = Double.MAX_VALUE;
+
+    /**
+     * ClosestPair is really a set of closer points.
+     * Methods on it will calculate filters and apply them.
+     */
+    public ClosestPair() {
+        points = new HashSet<>(); // create empty
+    }
+
+    public ClosestPair(Set<Point> initial) {
+        points = initial; // use set to initialise
+    }
+
+    // bounding box dimensions S - Smallest, L - Largest, x and y
+    private double boxSx = Double.MAX_VALUE;
+    private double boxLx = -boxSx;
+    private double boxSy = boxSx;
+    private double boxLy = boxLx;
+    // keep the points as they come
+    private final Set<Point> points;
+
+    /**
+     * @return List of the points remaining
+     */
+    public List<Point> toList(){
+        return new ArrayList<>(points);
+    }
+
+    /**
+     * Add the point and ensure the box contains it.
+     *
+     * @param p the point to add
+     * @param x its x coordinate
+     * @param y its y coordinate
+     */
+    public void addPoint(Point p, double x, double y){
+        points.add(p);
+        // expand the box if necessary
+        if (x > boxLx)
+            boxLx = x;
+        if (x < boxSx)
+            boxSx = x;
+        if (y > boxLy)
+            boxLy = y;
+        if (y < boxSy)
+            boxSy = y;
+        /*
+        System.out.printf(
+                "X: %2.2f, Y: %2.2f, SX: %2.2f, LX: %2.2f, SY: %2.2f, LY: %2.2f%n",
+                x, y, boxSx, boxLx, boxSy, boxLy);
+         */
+    }
+
+    /**
+     * Chose and remove a random point
+     *
+     * @return chosen Point
+     */
+    private Point removeRandom() {
+        // chose a point to start from
+        int choose = random.nextInt(points.size());
+        Point chosen = null; // assuming we have some points we will get one!
+        for (Point point : points) {
+            chosen = point;
+            if (choose-- <= 0)
+                break;
+        }
+        points.remove(chosen);
+        return chosen;
+    }
+
+    /**
+     * Get a smaller set of points that are closer together
+     *
+     * @return smaller set
+     */
+    public ClosestPair smaller() {
+        // so we don't redo the tst with same points!
+        if (points.size() <= 2) // can't be smaller!
+            return this; // stop looking!
+
+        ClosestPair closer = new ClosestPair();
+        Point chosen = removeRandom(); // take one of them
+
+        // get the shortest distance
+        // will be square of the shortest distance
+        closer.shortest = shortest;
+        // Chosen point
+        double x = chosen.x;
+        double y = chosen.y;
+        for (Point nextPoint:  points) {
+            double nx = nextPoint.x;
+            double ny = nextPoint.y;
+            double distance = (x - nx)*(x - nx) + (y - ny) * (y - ny);
+            if (closer.shortest > distance)
+                closer.shortest = distance;
+            closer.addPoint(nextPoint, nx, ny);
+        }
+        // add ourselves
+        closer.addPoint(chosen, x, y);
+        closer.removeLoneOnes();
+        // System.out.println(closer.points.size());
+        if (closer.points.size() < 2) // gone too far!
+            return this;
+        return closer.smaller(); // keep trying
+    }
+
+    /**
+     * The heart of the filtering: remove all lonely points.
+     *
+     * For each point, create a map of occupied grid places.
+     * For any occupied grid places, if they only contain one
+     * point check if they are really alone by checking for
+     * non-empty grid places in their "Moore neighborhood".
+     * If it's lonely remove it.
+     *
+     * Grid size (gs) is sqrt(shortest) / 2
+     * Coordinate is [round((x-minX)/gs), round((y-minY)/gs)] (rounded to nearest ints)
+     */
+    private void removeLoneOnes() {
+        /* create map points to coordinate
+         * create map of coordinates with counts of neighbours
+         * for each point
+         *    add its coordinate
+         *    inc its neighbour counts (including itself)
+         */
+        double gs = Math.sqrt(shortest) / 1.5;
+        int gw = (int) Math.ceil((boxLx - boxSx) / gs);
+        /*
+        System.out.printf(
+                "gs: %2.2f, gw: %2d%n", gs, gw);
+         */
+        Map<Point, Integer> coordinates = new HashMap<>();
+        Map<Integer, Integer> neighbours = new HashMap<>();
+        for (Point p : points) {
+            // convert point into an integer "coordinate"
+            int key = (int) Math.round(p.x / gs) + gw * (int) Math.round(p.y / gs);
+            coordinates.put(p, key);
+            for (int i = -1; i <= 1; i++) {
+                for (int j = -1; j <= 1; j++) {
+                    // convert "coordinate" into neighbour "coordinate"
+                    int neighbour = key + i + j * gw;
+                    int count = neighbours.getOrDefault(neighbour, 0);
+                    neighbours.put(neighbour, count + 1);
+                }
+            }
+        }
+        for (Point p: coordinates.keySet()) {
+            int key = coordinates.get(p);
+            if (neighbours.get(key) < 2) { // no neighbours so remove it
+                points.remove(p);
+            }
+        }
+    }
+
+
     public static List<Point> closestPair(List<Point> points) {
         // first shortcut: any duplicates must be closest!
         Point firstDuplicate = null;
-        HashSet<Point> uniquePoints = new HashSet<>();
-        for (Point p: points) {
-            if (!uniquePoints.add(p)){
+        Set<Point> uniquePoints = new HashSet<>();
+        for (Point p : points) {
+            if (!uniquePoints.add(p)) {
                 firstDuplicate = p; // found one!
                 break;
             }
         }
-        if (firstDuplicate != null){
+        if (firstDuplicate != null) {
             List<Point> duplicates = new ArrayList<>();
             duplicates.add(firstDuplicate);
             duplicates.add(firstDuplicate);
             return duplicates;
         }
-        // No duplicates and assuming that the given list is unsorted and random,
-        // then taking the first is as good as any to pick a random point!
-        Random random = new Random();
-        while (points.size() > 2){ // until last two points!
-            BoundingBox box = new BoundingBox();
-            int choose = random.nextInt(points.size());
-            List<Point> lookAt = new ArrayList<>();
-            Point selected = points.get(choose); // always works and probably random
-            for (int index = 0; index < points.size(); index++) {
-                if (index != choose)
-                    lookAt.add(points.get(index));
-            }
-            // shortest ths time ('d')
-            double shortest = Double.MAX_VALUE; // will be square of the shortest distance
-            // this point
-            double x = selected.x;
-            double y = selected.y;
-            box.addPoint(selected, x, y);
-            for (Point nextPoint: lookAt) {
-                double nx = nextPoint.x;
-                double ny = nextPoint.y;
-                box.addPoint(nextPoint, nx, ny);
-                double distance = (x - nx)*(x - nx) + (y - ny) * (y - ny);
-                if (shortest > distance)
-                    shortest = distance;
-            }
-            box.setGrid(shortest);
-            lookAt.add(selected);
-            box.removeLoneOnes(lookAt);
-            points = lookAt;
-        }
-        return points;
-    }
-
-    /**
-     * Represents the smallest box containing all the points
-     */
-    private static class BoundingBox{
-
-        // box dimensions S - Smallest, L - Largest, x and y
-        private double boxSx = Double.MAX_VALUE;
-        private double boxSy = boxSx;
-        private double boxLx = Double.MIN_VALUE;
-        private double boxLy = boxLx;
-        // keep the points as they come
-        private final List<Point> points = new ArrayList<>();
-        // when we set the grid, calculate the size of each side ... and get size
-        private double gridDelta;
-
-        /**
-         * Add the point and ensure the box contains it.
-         *
-         * @param p the point to add
-         * @param x it's x coordinate
-         * @param y int's y coordinate
-         */
-        public void addPoint(Point p, double x, double y){
-            points.add(p);
-            // expand the box if necessary
-            if (boxLx < x)
-                boxLx = x;
-            if (boxSx > x)
-                boxSx = x;
-            if (boxLy < y)
-                boxLy = y;
-            if (boxSy > y)
-                boxSy = y;
-        }
-
-        /**
-         * Set up the grid size based on the squared shortest distance.
-         *
-         * @param d2 square of the shortest distance
-         */
-        public void setGrid(double d2){
-            gridDelta = Math.sqrt(d2) / 2.0; // using the logic we have been given
-        }
-
-        /**
-         * Calculate the grid containing this point
-         * @param p point to locate
-         * @return a grid coordinate
-         */
-        private int[] getCoordinate(Point p) {
-            return new int[]{
-                    (int) Math.floor(p.x / gridDelta),
-                    (int) Math.floor(p.y / gridDelta)
-            };
-        }
-
-        /**
-         * The heart of the filtering: remove all lonely points.
-         *
-         * For each point, create a map of occupied grid places.
-         * For any occupied grid places, if they only contain one
-         * point check if they are really alone by checking for
-         * non-empty grid places in their "Moore neighborhood".
-         * If it's lonely remove it from the given list.
-         *
-         * @param everyone List of all the points
-         */
-        public void removeLoneOnes(List<Point> everyone) {
-            // fill occupied:
-            Map<int[], List<Point>> occupied = new HashMap<>();
-            for (Point p : points) {
-                int[] key = getCoordinate(p);
-                List<Point> list = occupied.getOrDefault(key, new ArrayList<>());
-                list.add(p);
-                occupied.put(key, list);
-            }
-            for (int[] key: occupied.keySet()) {
-                if (occupied.get(key).size() < 2) {
-                    // may be lonely check "Moore neighborhood"
-                    boolean lonely = !occupied.containsKey(new int[]{key[0]-1, key[1]});
-                    lonely = lonely && !occupied.containsKey(new int[]{key[0]+1, key[1]});
-                    lonely = lonely && !occupied.containsKey(new int[]{key[0]-1, key[1]-1});
-                    lonely = lonely && !occupied.containsKey(new int[]{key[0]+1, key[1]-1});
-                    lonely = lonely && !occupied.containsKey(new int[]{key[0]-1, key[1]+1});
-                    lonely = lonely && !occupied.containsKey(new int[]{key[0]+1, key[1]+1});
-                    lonely = lonely && !occupied.containsKey(new int[]{key[0]-1, key[1]-1});
-                    lonely = lonely && !occupied.containsKey(new int[]{key[0]-1, key[1]+1});
-                    if(lonely)
-                        everyone.remove(occupied.get(key).get(0)); // remove it as it is lonely
-                }
-            }
-        }
+        return new ClosestPair(uniquePoints).smaller().toList();
     }
 
 }
+
+
