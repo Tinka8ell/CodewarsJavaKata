@@ -1,5 +1,5 @@
 # CodewarsJavaKata
-Submissions to the Java Kata on Codewars.
+Submissions to the Java KataFour on Codewars.
 
 ## Longest Slide Down A Pyramid
 I am particularly proud of my version of [LongestSlideDown](/src/main/java/LongestSlideDown.java)
@@ -30,7 +30,7 @@ So we will complete the [Assembler Interpreter](/src/main/java/AssemblerInterpre
 And test it with the [test suite](/src/test/java/AssemblerInterpreterTest.java)
 
 ## Arbitrary Fibonacci numbers
-Could not resist this on, [The Millionth Fibonacci Kata](https://www.codewars.com/kata/53d40c1e2f13e331fc000c26), 
+Could not resist this on, [The Millionth Fibonacci KataFour](https://www.codewars.com/kata/53d40c1e2f13e331fc000c26), 
 as it was beyond me.  I did look at the maths, but that defeated me.  Found an implementation, so I understood, 
 but had to adapt it to cope with BigInteger numbers, and got it working, but fell foul of the processor limit on 
 the kata! Worked out a way to shortcut the power calculation, especially for the 1000000th one!  Just to prove it,
@@ -38,7 +38,7 @@ the 1000000th Fibonacci number is:
 ok I will add it at the end ... it is very long ...
 
 ## Connect 4
-I love the game ones, so I am doing the [Connect4 Kata](https://www.codewars.com/kata/586c0909c1923fdb89002031).
+I love the game ones, so I am doing the [Connect4 KataFour](https://www.codewars.com/kata/586c0909c1923fdb89002031).
 
 # Yet to complete:
 

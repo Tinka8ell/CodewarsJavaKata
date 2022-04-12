@@ -22,7 +22,7 @@ class ClosestPairTest {
                 new Point(7, 9)  //G
         );
 
-        List<Point> result = ClosestPair.closestPair(points);
+        List<Point> result = Kata.closestPair(points);
         List<Point> expected = Arrays.asList(new Point(6, 3), new Point(7, 4));
         verify(expected, result);
     }
@@ -35,7 +35,7 @@ class ClosestPairTest {
                 new Point(6, 3)
         );
 
-        List<Point> result = ClosestPair.closestPair(points);
+        List<Point> result = Kata.closestPair(points);
         List<Point> expected = Arrays.asList(new Point(6, 3), new Point(2, 2));
         verify(expected, result);
     }
@@ -54,7 +54,7 @@ class ClosestPairTest {
                 new Point(7, 9)  //G
         );
 
-        List<Point> result = ClosestPair.closestPair(points);
+        List<Point> result = Kata.closestPair(points);
         List<Point> expected = Arrays.asList(new Point(5, 5), new Point(5,5));
         verify(expected, result);
     }
