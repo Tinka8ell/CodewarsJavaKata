@@ -52,7 +52,7 @@ import java.util.*;
 public class Kata {
 
     private static final Random random = new Random();
-    public static final double FACTOR = 1.5;
+    public static final double FACTOR = 1.7;
 
     private double shortest = Double.MAX_VALUE;
 
@@ -128,8 +128,8 @@ public class Kata {
      */
     public Kata smaller() {
         // so we don't redo the tst with same points!
-        if (points.size() <= 2) // can't be smaller!
-            return this; // stop looking!
+        if (points.size() <= 5) // getting near
+            return slowly(); // stop fast looking!
 
         Kata closer = new Kata();
         Point chosen = removeRandom(); // take one of them
@@ -152,9 +152,49 @@ public class Kata {
         closer.addPoint(chosen, x, y);
         closer.removeLoneOnes();
         // System.out.println(closer.points.size());
+        addPoint(chosen, x, y);  // restore this!
         if (closer.points.size() < 2) // gone too far!
-            return this;
+            return slowly();
+        if (closer.points.size() == points.size()) // not worked!
+            return slowly();
+        /*
+        System.err.println("From " + points.size() + " to " + closer.points.size());
+        if (points.size() < closer.points.size()){
+            System.err.println("From " + Arrays.toString(points.toArray()));
+            System.err.println("To " + Arrays.toString(closer.points.toArray()));
+        }
+         */
         return closer.smaller(); // keep trying
+    }
+
+    /**
+     * Less than or equal to 5, so do the last bit slowly!
+     *
+     * @return last pair (closest)
+     */
+    private Kata slowly() {
+        // System.err.println("Slowly " + points.size());
+        if (points.size() <= 2) // got there
+            return this;
+        Point[] all = points.toArray(new Point[0]);
+        double shortest = Double.MAX_VALUE;
+        Kata closest = null;
+        for (int i = 0; i < all.length; i++) {
+            double x = all[i].x;
+            double y = all[i].y;
+            for (int j = i + 1; j < all.length; j++) {
+                double nx = all[j].x;
+                double ny = all[j].y;
+                double distance = (x - nx)*(x - nx) + (y - ny) * (y - ny);
+                if (shortest > distance){
+                    shortest = distance;
+                    closest = new Kata();
+                    closest.addPoint(all[i], x, y);
+                    closest.addPoint(all[j], nx, ny);
+                }
+            }
+        }
+        return closest;
     }
 
     /**
@@ -206,6 +246,7 @@ public class Kata {
     public static List<Point> closestPair(List<Point> points) {
         // first shortcut: any duplicates must be closest!
         Point firstDuplicate = null;
+        // System.err.println(Arrays.toString(points.toArray()));
         Set<Point> uniquePoints = new HashSet<>();
         for (Point p : points) {
             if (!uniquePoints.add(p)) {
@@ -219,7 +260,9 @@ public class Kata {
             duplicates.add(firstDuplicate);
             return duplicates;
         }
-        return new Kata(uniquePoints).smaller().toList();
+        Kata smallest = new Kata(uniquePoints).smaller();
+        // System.err.println(Arrays.toString(smallest.points.toArray()));
+        return smallest.toList();
     }
 
 }

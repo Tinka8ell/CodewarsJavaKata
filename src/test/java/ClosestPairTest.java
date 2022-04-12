@@ -73,4 +73,64 @@ class ClosestPairTest {
         assertTrue(eq, String.format("Expected: %s, Actual: %s", expected, actual));
     }
 
+
+    @Test
+    public void test10() {
+
+        List<Point> points = Arrays.asList(
+                new Point(2, 2), new Point(2, 8), new Point(5, 5), new Point(6, 3),
+                new Point(6, 7), new Point(7, 4), new Point(7, 9)
+        );
+
+        List<Point> result = Kata.closestPair(points);
+        List<Point> expected = Arrays.asList(new Point(7, 4), new Point(6,3));
+        verify(expected, result);
+    }
+
+    @Test
+    public void test11() {
+
+        List<Point> points = Arrays.asList(
+                new Point(2, 2), new Point(6, 3)
+        );
+
+        List<Point> result = Kata.closestPair(points);
+        List<Point> expected = Arrays.asList(new Point(2, 2), new Point(6, 3));
+        verify(expected, result);
+    }
+
+    @Test
+    public void test12() {
+
+        List<Point> points = Arrays.asList(
+                new Point(2, 2), new Point(2, 8), new Point(5, 5), new Point(5, 5),
+                new Point(6, 3), new Point(6, 7), new Point(7, 4), new Point(7, 9)
+        );
+
+        List<Point> result = Kata.closestPair(points);
+        List<Point> expected = Arrays.asList(new Point(5, 5), new Point(5,5));
+        verify(expected, result);
+    }
+
+    @Test
+    public void test13() {
+
+        List<Point> points = Arrays.asList(
+                new Point(0.004477, 0.010088), new Point(0.001750, 0.008304), new Point(0.008387, 0.012612),
+                new Point(0.012745, 0.010152), new Point(0.009958, 0.008218), new Point(0.000754, 0.003441),
+                new Point(0.015654, 0.007540), new Point(0.004860, 0.001948), new Point(0.006219, -0.000205),
+                new Point(0.001911, 0.001342), new Point(-0.001413, 0.007705), new Point(0.014316, 0.000104),
+                new Point(0.015812, 0.004134), new Point(-0.001768, 0.008126), new Point(0.006425, -0.005368),
+                new Point(0.008052, -0.003760), new Point(0.013636, 0.003723), new Point(0.012671, 0.005624),
+                new Point(0.011769, 0.013250), new Point(0.004954, -0.002518), new Point(0.003360, 0.004874),
+                new Point(0.012482, -0.001965), new Point(0.009075, 0.003953), new Point(0.017167, 0.001999),
+                new Point(0.007016, 0.007622), new Point(0.009736, 0.000464)
+        );
+
+        List<Point> result = Kata.closestPair(points);
+        List<Point> expected = Arrays.asList(new Point(-0.001768, 0.008126), new Point(-0.001413, 0.007705));
+        verify(expected, result);
+    }
+
+
 }
