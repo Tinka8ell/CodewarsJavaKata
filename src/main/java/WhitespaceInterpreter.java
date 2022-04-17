@@ -36,6 +36,12 @@ public class WhitespaceInterpreter {
         return output.toString();
     }
 
+    private Integer readNext() {
+        int code = codeQueue.poll();
+        debug.append((code == 0) ? '0' : (code > 0) ? '+' : '-');
+        return code;
+    }
+
     private void processIMP() {
         int IMP = readNext();
         switch (IMP){
@@ -53,6 +59,71 @@ public class WhitespaceInterpreter {
                     default -> // 1
                             // Heap Access
                             throw new RuntimeException("Heap Access not implemented yet");
+                }
+            }
+        }
+    }
+
+    private void processStackManipulation() {
+        int cmd = readNext();
+        switch (cmd) {
+            case 0 -> {
+                // Push n onto the stack
+                int n = readN();
+                debug.append("push(").append(n).append(")");
+                pushToStack(n);
+            }
+            case 1 -> {
+                cmd = readNext();
+                switch (cmd) {
+                    case 0 -> {
+                        // (number): Duplicate the nth value from the top of the stack and push onto the stack.
+                        int n = readN();
+                        if (n < 0) // don't think this should support -nth from top of stack!
+                            throw new RuntimeException("Not a valid stack manipulation command");
+                        int m = stack.elementAt(stack.size() - 1 - n);
+                        debug.append("dupAt(").append(n).append("/").append(m).append(")");
+                        pushToStack(m);
+                    }
+                    case -1 -> {
+                        // (number): Discard the top n values below the top of the stack from the stack.
+                        //              (For `n < 0` or `n >= stack.length`, remove everything but the top value.)
+                        int n = readN();
+                        int m = popFromStack(); // top of stack
+                        debug.append("discBelow(").append(n).append("/").append(m).append(")");
+                        while (!stack.empty() && n > 0){
+                            popFromStack();
+                            n--;
+                        }
+                        pushToStack(m);
+                    }
+                    default -> // 1
+                            throw new RuntimeException("Not a valid stack manipulation command");
+                }
+            }
+            default -> {
+                cmd = readNext();
+                switch (cmd) {
+                    case 0 -> {
+                        // Duplicate the top value on the stack.
+                        int n = popFromStack();
+                        debug.append("dup(").append(n).append(")");
+                        pushToStack(n);
+                        pushToStack(n);
+                    }
+                    case 1 -> {
+                        // Swap the top two value on the stack.
+                        int n = popFromStack();
+                        int m = popFromStack();
+                        debug.append("swap(").append(n).append("/").append(m).append(")");
+                        pushToStack(n);
+                        pushToStack(m);
+                    }
+                    default -> {
+                        // -1 - Discard the top value on the stack.
+                        int n = popFromStack();
+                        debug.append("drop(").append(n).append(")");
+                    }
                 }
             }
         }
@@ -76,12 +147,6 @@ public class WhitespaceInterpreter {
                 codeQueue.clear(); // make sure we stop here
             }
         }
-    }
-
-    private Integer readNext() {
-        int code = codeQueue.poll();
-        debug.append((code == 0) ? '0' : (code > 0) ? '+' : '-');
-        return code;
     }
 
     private void processInputOutput() {
@@ -121,27 +186,6 @@ public class WhitespaceInterpreter {
 
     private int popFromStack() {
         return stack.pop();
-    }
-
-    private void processStackManipulation() {
-        int cmd = readNext();
-        switch (cmd) {
-            case 0 -> {
-                // Push n onto the stack
-                int n = readN();
-                debug.append("push(").append(n).append(")");
-                pushToStack(n);
-            }
-            case 1 -> // 0 (number): Duplicate the nth value from the top of the stack and push onto the stack.
-                    // -1 (number): Discard the top n values below the top of the stack from the stack.
-                    //              (For `n < 0` or `n >= stack.length`, remove everything but the top value.)
-                    throw new RuntimeException("Not implemented number yet");
-            default -> // 1
-                    // 0 - Duplicate the top value on the stack.
-                    // 1 - Swap the top two value on the stack.
-                    // -1 - Discard the top value on the stack.
-                    throw new RuntimeException("Not implemented single yet");
-        }
     }
 
     /**
