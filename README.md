@@ -42,6 +42,12 @@ I love the game ones, so I am doing the [Connect4 KataFour](https://www.codewars
 
 # Yet to complete:
 
+## Whitespace Interpreter
+I am enthralled with this [Whitespace Interpreter Kata](https://www.codewars.com/kata/52dc4688eca89d0f820004c6)! 
+It is just so different from anything else.  I love that it is so minimal!
+I think it is too difficult to explain in any Javadoc, so I have added a [whitespace.md](doc/whitespace.md) 
+file to explain it.
+
 ## Closest pair of points in linearithmic time
 For my next trick: [Closest pair of points in linearithmic time](https://www.codewars.com/kata/5376b901424ed4f8c20002b7).  
 This will get me into the dark realm of computer science and big O notation.  See the Wikipedia entry for the
