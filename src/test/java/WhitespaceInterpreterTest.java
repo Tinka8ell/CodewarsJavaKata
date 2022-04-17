@@ -34,7 +34,7 @@ class WhitespaceInterpreterTest {
     @Test
     public void testFlowEdge() {
         System.out.println("Testing simple flow control edge case");
-        assertThrows(Exception.class, () -> WhitespaceInterpreter.execute("", null));
+        assertThrows(RuntimeException.class, () -> WhitespaceInterpreter.execute("", null));
     }
 
     @Test
