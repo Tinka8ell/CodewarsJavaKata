@@ -401,7 +401,7 @@ public class WhitespaceInterpreter {
         return action;
     }
 
-    public String execute(InputStream rawInput) {
+    public String execute(InputStream rawInput, OutputStream outputStream) throws IOException {
         BufferedReader input = rawInput == null ? null :
                 new BufferedReader(new InputStreamReader(rawInput, StandardCharsets.UTF_8));
         StringBuilder output = new StringBuilder();
@@ -463,10 +463,14 @@ public class WhitespaceInterpreter {
                 case OUTC:
                     n = popFromStack();
                     output.append((char) n);
+                    if (outputStream != null)
+                        outputStream.write(n);
                     break;
                 case OUTN:
                     n = popFromStack();
                     output.append(n);
+                    if (outputStream != null)
+                        outputStream.write(((Integer) n).toString().getBytes(StandardCharsets.UTF_8));
                     break;
                 case CALL:
                     label = nextInteger();
@@ -617,6 +621,19 @@ public class WhitespaceInterpreter {
      */
     // solution
     public static  String execute(String code, InputStream input) {
+        return execute(code, input, null);
+    }
+
+    /**
+     * Execute the given code string with the given input stream
+     *
+     * @param code String of Whitespace code
+     * @param inputStream an InputStream to possibly read from
+     * @param outputStream an OutputStream to optionally output to if provided
+     * @return output as a String
+     */
+    // solution
+    public static String execute(String code, InputStream inputStream, OutputStream outputStream) {
         WhitespaceInterpreter whitespaceInterpreter = new WhitespaceInterpreter(code);
         System.out.println("Parse: " + whitespaceInterpreter.debug);
         System.out.println("Labels: " + whitespaceInterpreter.labels.size());
@@ -626,7 +643,7 @@ public class WhitespaceInterpreter {
         whitespaceInterpreter.debug = new StringBuilder(); // reset
         String output = "Nothing";
         try {
-            output = whitespaceInterpreter.execute(input);
+            output = whitespaceInterpreter.execute(inputStream, outputStream);
             System.out.println("Debug: " + whitespaceInterpreter.debug);
             System.out.println("Output: " + output);
         } catch (RuntimeException e){
@@ -634,6 +651,11 @@ public class WhitespaceInterpreter {
             System.out.println("Debug: " + whitespaceInterpreter.debug);
             System.out.println("Output: " + output);
             throw e;
+        } catch (IOException e) {
+            System.out.println("IOException: " + e.getMessage());
+            System.out.println("Debug: " + whitespaceInterpreter.debug);
+            System.out.println("Output: " + output);
+            throw new RuntimeException("IOException: " + e.getMessage());
         }
         return output;
     }
