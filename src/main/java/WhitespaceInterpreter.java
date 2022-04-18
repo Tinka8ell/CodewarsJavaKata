@@ -1,7 +1,7 @@
-import java.io.InputStream;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-@SuppressWarnings("ALL")
 public class WhitespaceInterpreter {
 
     public static final int PUSH_N = 900; // random seed
@@ -23,8 +23,12 @@ public class WhitespaceInterpreter {
     public static final int JUMP_Z = MOD + 1;
     public static final int JUMP_N= JUMP_Z + 1;
     public static final int JUMP_P = JUMP_N + 1;
+    public static final int GETC = JUMP_P + 1;
+    public static final int GETN = GETC + 1;
+    public static final int HEAP_S = GETN + 1;
+    public static final int HEAP_G = HEAP_S + 1;
 
-    private final StringBuilder debug;
+    private StringBuilder debug;
     private final List<Integer> pseudocode;
     private final Map<Integer, Integer> labels;
     private int location;
@@ -52,8 +56,18 @@ public class WhitespaceInterpreter {
         labels = new HashMap<>();
         location = 0;
         executing = true;
-        while (executing && location < codeArray.length){
-            parseIMP();
+        try {
+            while (executing && location < codeArray.length){
+                parseIMP();
+            }
+        }
+        catch (RuntimeException e){
+            System.out.println("Parse error: " + debug);
+            System.out.println("Labels: " + labels.size());
+            for (int label: labels.keySet()) {
+                System.out.println("   " + label + ": " + labels.get(label));
+            }
+            throw e;
         }
     }
 
@@ -90,7 +104,7 @@ public class WhitespaceInterpreter {
                         break;
                     default: // 1
                         // Heap Access
-                        throw new RuntimeException("Heap Access not implemented yet");
+                        parseHeapAccess();
                 }
         }
     }
@@ -275,11 +289,42 @@ public class WhitespaceInterpreter {
                 }
                 break;
             case 1: // Read ...
-                    // '\t' ' ': Read a character from input, a, Pop a value off the stack, b, then store the ASCII value of a at heap address b.
-                    // '\t' '\t' : Read a number from input, a, Pop a value off the stack, b, then store a at heap address b.
-                    throw new RuntimeException("Input not implemented number yet");
+                cmd = readNext();
+                switch (cmd) {
+                    case 0:
+                        // Read a character from input, a, Pop a value off the stack, b, then store the ASCII value of a at heap address b.
+                        pseudocode.add(GETC);
+                        debug.append("GetC");
+                        break;
+                    case 1:
+                        // Read a number from input, a, Pop a value off the stack, b, then store a at heap address b.
+                        pseudocode.add(GETN);
+                        debug.append("GetN");
+                        break;
+                    default: // Invalid command
+                        throw new RuntimeException("Not a valid input / output command");
+                }
+                break;
             default: // Invalid command
                     throw new RuntimeException("Not a valid input / output command");
+        }
+    }
+
+    private void parseHeapAccess() {
+        int cmd = readNext();
+        switch (cmd) {
+            case 0:
+                // Pop a and b, then store a at heap address b.
+                pseudocode.add(HEAP_S);
+                debug.append("HeapS");
+                break;
+            case 1:
+                // Pop a and then push the value at heap address a onto the stack.
+                pseudocode.add(HEAP_G);
+                debug.append("HeapG");
+                break;
+            default: // Invalid command
+                throw new RuntimeException("Not a valid heap access command");
         }
     }
 
@@ -347,7 +392,9 @@ public class WhitespaceInterpreter {
         return action;
     }
 
-    public String execute(InputStream input) {
+    public String execute(InputStream rawInput) {
+        BufferedReader input = rawInput == null ? null :
+                new BufferedReader(new InputStreamReader(rawInput, StandardCharsets.UTF_8));
         output = new StringBuilder();
         stack = new Stack<>();
         returnLocation = new Stack<>();
@@ -483,6 +530,40 @@ public class WhitespaceInterpreter {
                     }
                     debug.append(", NJ");
                     break;
+                case HEAP_S:
+                    n = popFromStack();
+                    m = popFromStack();
+                    heap.put(m, n);
+                    debug.append(", ").append(m).append("(").append(n).append(")");
+                    break;
+                case HEAP_G:
+                    n = popFromStack();
+                    m = heap.get(n);
+                    pushToStack(m);
+                    debug.append(", ").append(n).append("(").append(m).append(")");
+                    break;
+                case GETC:
+                    try {
+                        n = input.read();
+                    } catch (IOException e) {
+                        throw new RuntimeException("Error reading from input: " +e.getMessage());
+                    }
+                    // only for debug! System.out.println("Read in: " + n);
+                    m = popFromStack();
+                    heap.put(m, n);
+                    debug.append(", ").append(m).append("(").append(n).append(")");
+                    break;
+                case GETN:
+                    try {
+                        String number = input.readLine();
+                        n = Integer.parseInt(number);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Error reading from input: " +e.getMessage());
+                    }
+                    m = popFromStack();
+                    heap.put(m, n);
+                    debug.append(", ").append(m).append("(").append(n).append(")");
+                    break;
                 default:
                     throw new RuntimeException("Process Pseudocode not written yet!");
             }
@@ -531,22 +612,20 @@ public class WhitespaceInterpreter {
     // solution
     public static  String execute(String code, InputStream input) {
         WhitespaceInterpreter whitespaceInterpreter = new WhitespaceInterpreter(code);
+        System.out.println("Parse: " + whitespaceInterpreter.debug);
+        System.out.println("Labels: " + whitespaceInterpreter.labels.size());
+        for (int label: whitespaceInterpreter.labels.keySet()) {
+            System.out.println("   " + label + ": " + whitespaceInterpreter.labels.get(label));
+        }
+        whitespaceInterpreter.debug = new StringBuilder(); // reset
         String output = "Nothing";
         try {
             output = whitespaceInterpreter.execute(input);
             System.out.println("Debug: " + whitespaceInterpreter.debug);
-            System.out.println("Labels: " + whitespaceInterpreter.labels.size());
-            for (int label: whitespaceInterpreter.labels.keySet()) {
-                System.out.println("   " + label + ": " + whitespaceInterpreter.labels.get(label));
-            }
             System.out.println("Output: " + output);
         } catch (RuntimeException e){
             System.out.println("Runtime Error: " + e.getMessage());
             System.out.println("Debug: " + whitespaceInterpreter.debug);
-            System.out.println("Labels: " + whitespaceInterpreter.labels.size());
-            for (int label: whitespaceInterpreter.labels.keySet()) {
-                System.out.println("   " + label + ": " + whitespaceInterpreter.labels.get(label));
-            }
             System.out.println("Output: " + output);
             throw e;
         }

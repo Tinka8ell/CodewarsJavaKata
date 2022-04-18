@@ -1,7 +1,6 @@
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -118,6 +117,22 @@ class WhitespaceInterpreterTest {
                 S S L
                 L
                 L""";
+        /*
+         * 000+00+000-push(72)
+         * +-00OutC000++00+0+-push(101)
+         * +-00OutC000++0++00-push(108)
+         * +-00OutC000++0++00-push(108)
+         * +-00OutC000++0++++-push(111)
+         * +-00OutC000+0++00-push(44)
+         * +-00OutC000+00000-push(32)
+         * +-00OutC000+++0+++-push(119)
+         * +-00OutC000++0++++-push(111)
+         * +-00OutC000+++00+0-push(114)
+         * +-00OutC000++0++00-push(108)
+         * +-00OutC000++00+00-push(100)
+         * +-00OutC000+0000+-push(33)
+         * +-00OutC--END!
+         */
         assertEquals("Hello, world!", WhitespaceInterpreter.execute(test, null));
     }
 
@@ -125,6 +140,26 @@ class WhitespaceInterpreterTest {
     public void testCatProgram(){
         /*
          * This will output whatever is on it's input ...
+         * Hand compiled:
+         *    LSS - label
+         *    SL - "0"
+         *    SS - push
+         *    STL - "+1"
+         *    TLTS - read character (to "1")
+         *    SS - push
+         *    STL - "+1"
+         *    TTT - retrieve from "1"
+         *    LTTTL - test < 0 and jump to end
+         *    SS - push
+         *    STL - "+1"
+         *    TTT - retrieve from "1"
+         *    TLSS - output from stack
+         *    LSL - jump
+         *    SL - "0"
+         *    LSS - label
+         *    TL - "1"
+         *    LLL - end
+         *
          */
         String test = """
                 L
@@ -132,11 +167,11 @@ class WhitespaceInterpreterTest {
                 S S S T\tL
                 T\tL
                 T\tS S S S T\tL
-                 T\tT\tT\tT\tL
-                S S S S S T\tL
-                L
-                T\tS T\tL
-                L
+                T\tT\tT\tL
+                T\tT\tT\tL
+                S S S T\tL
+                T\tT\tT\tT\tL
+                S S L
                 S L
                 S L
                 L
@@ -145,7 +180,7 @@ class WhitespaceInterpreterTest {
                 L
                 L
                 """;
-        String expected = "Input";
+        String expected = "Input as expected!";
         InputStream input = new ByteArrayInputStream(expected.getBytes());
         assertEquals(expected, WhitespaceInterpreter.execute(test, input));
     }
@@ -173,7 +208,7 @@ class WhitespaceInterpreterTest {
                 L
                 L
                 """;
-        String expected = "111110"; // any number of 1's will be output as is, and terminate at 0
+        String expected = "0"; // any '1's will create continuous '1's, otherwise terminate at 0
         InputStream input = new ByteArrayInputStream(expected.getBytes());
         assertEquals(expected, WhitespaceInterpreter.execute(test, input));
     }
