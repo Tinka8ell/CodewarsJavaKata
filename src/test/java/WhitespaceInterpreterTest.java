@@ -259,113 +259,160 @@ class WhitespaceInterpreterTest {
         assertEquals("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n", WhitespaceInterpreter.execute(test, null));
     }
 
+    @Test
+    public void checkOutOfBoundsIndex(){
+        /*
+          * Kata hidden test case:
+          * SSSTL   - push(1)
+          * SSSTSL  - push(2)
+          * SSSTTL  - push(3)
+          * STL     - discard
+          * TTSSSSS -  -32
+          * TLST    - Out Number
+          * TLST    - Out Number
+          * L
+          * L       - END!
+         */
+        String code = """
+                S S S T\tL
+                S S S T\tS L
+                S S S T\tT\tL
+                S T\tL
+                T\tT\tS S S S S L
+                T\tL
+                S T\tT\tL
+                S T\tL
+                L
+                """;
+        assertThrows(RuntimeException.class, () -> WhitespaceInterpreter.execute(code, null));
+
+        String code2 = """
+                S S S T\tL
+                S S S T\tS L
+                S S S T\tT\tL
+                S T\tL
+                T\tS T\tS S L
+                T\tL
+                S T\tS T\tL
+                S T\tL
+                L
+                """;
+        assertThrows(RuntimeException.class, () -> WhitespaceInterpreter.execute(code2, null));
+    }
+
+    @Test
+    public void checkFloorDivision(){
+        String code = """
+                S S T\tT\tS S S L
+                S S S T\tT\tL
+                T\tS T\tS T\tL
+                S T\tL
+                L
+                """;
+        String expected = "-3";
+        assertEquals(expected, WhitespaceInterpreter.execute(code, null), "Floor Divide");
+
+        code = """
+                S S S T\tS T\tL
+                S S T\tT\tS L
+                T\tS T\tT\tT\tL
+                S T\tL
+                L
+                """;
+        expected = "-1";
+        assertEquals(expected, WhitespaceInterpreter.execute(code, null), "Floor Mod");
+
+        code = """
+                S S S T\tS T\tL
+                S S T\tT\tT\tL
+                T\tS T\tT\tT\tL
+                S T\tL
+                L
+                """;
+        expected = "-1";
+        assertEquals(expected, WhitespaceInterpreter.execute(code, null), "remainder with the sign of the divisor");
+
+        code = """
+                S S T\tT\tS T\tL
+                S S S T\tS L
+                T\tS T\tT\tT\tL
+                S T\tL
+                L
+                """;
+        expected = "1";
+        assertEquals(expected, WhitespaceInterpreter.execute(code, null), "remainder with the sign of the divisor");
+
+        code = """
+                S S T\tT\tS T\tL
+                S S S T\tT\tL
+                T\tS T\tT\tT\tL
+                S T\tL
+                L
+                """;
+        expected = "1";
+        assertEquals(expected, WhitespaceInterpreter.execute(code, null), "remainder with the sign of the divisor");
+    }
+
+    @Test
+    public void checkEndOfInput(){
+        String code = """
+                S S S T\tL
+                T\tL
+                T\tS S S S T\tS L
+                T\tL
+                T\tS S S S T\tT\tL
+                T\tL
+                T\tS S S S T\tS S L
+                T\tL
+                T\tS S S S T\tS T\tL
+                T\tL
+                T\tS S S S T\tS T\tL
+                T\tT\tT\tS S S T\tS S L
+                T\tT\tT\tS S S T\tT\tL
+                T\tT\tT\tS S S T\tS L
+                T\tT\tT\tS S S T\tL
+                T\tT\tT\tT\tL
+                S S T\tL
+                S S T\tL
+                S S T\tL
+                S S T\tL
+                S S L
+                L
+                """;
+        String expected = "Hello";
+        InputStream input = new ByteArrayInputStream(expected.getBytes());
+        assertEquals(expected, WhitespaceInterpreter.execute(code, input), "Output what we get!");
+
+        String shortened = "Hell";
+        InputStream shortInput = new ByteArrayInputStream(shortened.getBytes());
+        assertThrows(RuntimeException.class, () -> WhitespaceInterpreter.execute(code, shortInput), "Should run out of input");
+    }
+
+    @Test
+    public void checkJumpForward(){
+        String code = """
+                S S S T\tL
+                S S S T\tS L
+                S S S T\tT\tL
+                T\tL
+                S T\tL
+                S L
+                L
+                L
+                S S L
+                T\tL
+                S T\tT\tL
+                S T\tL
+                L
+                """;
+        String expected = "321";
+        InputStream input = new ByteArrayInputStream(expected.getBytes());
+        assertEquals(expected, WhitespaceInterpreter.execute(code, input), "Jump forward");
+    }
+
     /*
     Extra test cases!!!
-Parse: 000+-push(1)
-000+0-push(2)
-000++-push(3)
-0+-++00000-disc(-32)
-+-0+OutN+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], 1[2], 2[4], 3[6][8][9][10]!!!
-Output: 32
-
-Expecting exception for out of bound index
-
-
-Log
-Parse: 000+-push(1)
-000+0-push(2)
-000++-push(3)
-0+-+0+00-disc(-4)
-+-0+OutN+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], 1[2], 2[4], 3[6][8][9][10]!!!
-Output: 32
-
-Expecting exception for out of bound index
-
-Log
-Parse: 00++000-push(-8)
-000++-push(3)
-+0+0div+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], -8[2], 3[4], -2[5][6]!!!
-Output: -2
-
-Should use floor division expected:<-[3]> but was:<-[2]>
-
-Log
-Parse: 000+0+-push(5)
-00++0-push(-2)
-+0++mod+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], 5[2], -2[4], 1[5][6]!!!
-Output: 1
-Should be the remainder with the sign of the divisor expected:<[-]1> but was:<[]1>
-
-Log
-Parse: 000+0+-push(5)
-00+++-push(-3)
-+0++mod+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], 5[2], -3[4], 2[5][6]!!!
-Output: 2
-Should be the remainder with the sign of the divisor expected:<[-1]> but was:<[2]>
-
-Log
-Parse: 00++0+-push(-5)
-000+0-push(2)
-+0++mod+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], -5[2], 2[4], -1[5][6]!!!
-Output: -1
-Should be the remainder with the sign of the divisor expected:<[]1> but was:<[-]1>
-
-Log
-Parse: 00++0+-push(-5)
-000++-push(3)
-+0++mod+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], -5[2], 3[4], -2[5][6]!!!
-Output: -2
-Should be the remainder with the sign of the divisor expected:<[1]> but was:<[-2]>
-
-Log
-Parse: 000+-push(1)
-+-+0GetC000+0-push(2)
-+-+0GetC000++-push(3)
-+-+0GetC000+00-push(4)
-+-+0GetC000+0+-push(5)
-+-+0GetC000+0+-push(5)
-+++HeapG000+00-push(4)
-+++HeapG000++-push(3)
-+++HeapG000+0-push(2)
-+++HeapG000+-push(1)
-+++HeapG+-00OutC+-00OutC+-00OutC+-00OutC+-00OutC--END!
-
-
-Labels: 0
-Debug: [0], 1[2], 1(72)[3], 2[5], 2(101)[6], 3[8], 3(108)[9], 4[11], 4(108)[12], 5[14], 5(-1)[15], 5[17], 5(-1)[18], 4[20], 4(108)[21], 3[23], 3(108)[24], 2[26], 2(101)[27], 1[29], 1(72)[30][31][32][33][34][35]!!!
-Output: Hell￿
-Expecting exception for end of input
-
-Log
-Parse: 000+-push(1)
+000+-push(1)
 000+0-push(2)
 000++-push(3)
 +-0+OutN-0--Jump(1)

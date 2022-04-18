@@ -432,7 +432,7 @@ public class WhitespaceInterpreter {
                 case DISC_N:
                     n = nextInteger();
                     m = popFromStack(); // top of stack
-                    while (!stack.empty() && n > 0){
+                    while (!stack.empty() && n != 0){   // TODO: possible fix so will remove lots!
                         popFromStack();
                         n--;
                     }
@@ -507,14 +507,16 @@ public class WhitespaceInterpreter {
                 case DIV:
                     n = popFromStack();
                     m = popFromStack();
-                    m /= n;
+                    m = Math.floorDiv(m, n);
                     debug.append(", ").append(m);
                     pushToStack(m);
                     break;
                 case MOD:
+                    // using floor mod:  x - y * Math.floorDiv(x, y);
                     n = popFromStack();
                     m = popFromStack();
-                    m %= n;
+                    if (m != 0)
+                        m = m - n * Math.floorDiv(m, n);
                     debug.append(", ").append(m);
                     pushToStack(m);
                     break;
@@ -557,6 +559,8 @@ public class WhitespaceInterpreter {
                     } catch (IOException e) {
                         throw new RuntimeException("Error reading from input: " +e.getMessage());
                     }
+                    if (n < 0) // TODO: Cat program will no longer work!
+                        throw new RuntimeException("Input has run out!");
                     // only for debug! System.out.println("Read in: " + n);
                     m = popFromStack();
                     heap.put(m, n);
@@ -588,7 +592,12 @@ public class WhitespaceInterpreter {
     }
 
     private int popFromStack() {
-        return stack.pop();
+        try{ // TODO: may wish to remove the extra wrapping to get it to pass Kata!
+            return stack.pop();
+        }
+        catch (EmptyStackException e){
+            throw new RuntimeException("Stack is empty when popping!");
+        }
     }
 
     /**
@@ -646,16 +655,16 @@ public class WhitespaceInterpreter {
             output = whitespaceInterpreter.execute(inputStream, outputStream);
             System.out.println("Debug: " + whitespaceInterpreter.debug);
             System.out.println("Output: " + output);
-        } catch (RuntimeException e){
-            System.out.println("Runtime Error: " + e.getMessage());
+        } catch (RuntimeException r){
+            System.out.println("Runtime Error: " + r.getMessage());
             System.out.println("Debug: " + whitespaceInterpreter.debug);
             System.out.println("Output: " + output);
-            throw e;
-        } catch (IOException e) {
-            System.out.println("IOException: " + e.getMessage());
+            throw r;
+        } catch (IOException io) {
+            System.out.println("IOException: " + io.getMessage());
             System.out.println("Debug: " + whitespaceInterpreter.debug);
             System.out.println("Output: " + output);
-            throw new RuntimeException("IOException: " + e.getMessage());
+            throw new RuntimeException("IOException: " + io.getMessage());
         }
         return output;
     }
