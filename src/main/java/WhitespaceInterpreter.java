@@ -132,10 +132,21 @@ public class WhitespaceInterpreter {
     private void processFlowControl() {
         int cmd = readNext();
         switch (cmd) {
-            case 0 -> //* `[space][space]` (label): Mark a location in the program with label n.
-                    //* `[space][tab]` (label): Call a subroutine with the location specified by label n.
-                    //* `[space][line-feed]` (label): Jump unconditionally to the position specified by label n.
-                    throw new RuntimeException("Label definition not implemented number yet");
+            case 0 -> {
+                cmd = readNext();
+                switch (cmd) {
+                    case 0 -> {// (label): Mark a location in the program with label n.
+                        int label = readLabel();
+                        throw new RuntimeException("Label goto not implemented number yet");
+                    }
+                    case 1 -> // (label): Call a subroutine with the location specified by label n.
+                            throw new RuntimeException("Label goto not implemented number yet");
+                    default -> {
+                        // (label): Jump unconditionally to the position specified by label n.
+                        throw new RuntimeException("Label definition not implemented number yet");
+                    }
+                }
+            }
             case 1 -> //* `[tab][space]` (label): Pop a value off the stack and jump to the label specified by n if the value is zero.
                     //* `[tab][tab]` (label): Pop a value off the stack and jump to the label specified by n if the value is less than zero.
                     //* `[tab][line-feed]`: Exit a subroutine and return control to the location from which the subroutine was called.
@@ -189,6 +200,23 @@ public class WhitespaceInterpreter {
     }
 
     /**
+     * Read a label from the code:
+     * Much like numbers, but different ...
+     * Labels end with a terminal symbol: -1 ('\n')'
+     * Consists of binary digits 0 (' ') or 1 ('\t')
+     * The expression of just <terminal> is valid
+     * Labels are unique, so "01" and "1" are different
+     * Adding a pseudo "1" before the binary creates unique numbers
+     * as "101" is 5, but "11" is 3 ...
+     *
+     * @return label as a number
+     */
+    private int readLabel() {
+        int number = readBinary(1);
+        return number;
+    }
+
+    /**
      * Read a number from the code:
      * Numbers begin with a sign symbol: 1 ('\t') -> negative or 0 (' ') -> positive
      * Numbers end with a terminal symbol: -1 ('\n')'
@@ -203,14 +231,26 @@ public class WhitespaceInterpreter {
         if (sign < 0)
             throw new NumberFormatException("bad number format <terminator> with no <sign>");
         sign = 1 - 2 * sign; // convert 0 / 1 to +1 / -1
+        int number = readBinary(0);
+        return number * sign;
+    }
+
+    /**
+     * Read binary from the code seeded with number:
+     * Binary end with a terminal symbol: -1 ('\n')'
+     * Consists of binary digits 0 (' ') or 1 ('\t')
+     *
+     * @param number is seed: 1 for a label and 0 for a number
+     * @return the number
+     */
+    private int readBinary(int number) {
         int terminator = readNext();
-        int number = 0;
         while (terminator != -1){
             number *= 2;
             number += terminator;
             terminator = readNext(); // if we end code early we should get an error!
         }
-        return number * sign;
+        return number;
     }
 
     /**
