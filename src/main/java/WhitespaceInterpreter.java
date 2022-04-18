@@ -22,8 +22,8 @@ public class WhitespaceInterpreter {
     public static final int MOD = DIV + 1;
     public static final int JUMP_Z = MOD + 1;
     public static final int JUMP_N= JUMP_Z + 1;
-    public static final int JUMP_P = JUMP_N + 1;
-    public static final int GETC = JUMP_P + 1;
+    public static final int RETN = JUMP_N + 1;
+    public static final int GETC = RETN + 1;
     public static final int GETN = GETC + 1;
     public static final int HEAP_S = GETN + 1;
     public static final int HEAP_G = HEAP_S + 1;
@@ -32,10 +32,7 @@ public class WhitespaceInterpreter {
     private final List<Integer> pseudocode;
     private final Map<Integer, Integer> labels;
     private int location;
-    private StringBuilder output;
     private Stack<Integer> stack;
-    private Stack<Integer> returnLocation;
-    private Map<Integer, Integer> heap;
     private final Integer[] codeArray;
     private boolean executing;
 
@@ -86,6 +83,7 @@ public class WhitespaceInterpreter {
 
     private void parseIMP() {
         int IMP = readNext();
+        //noinspection EnhancedSwitchMigration
         switch (IMP){
             case 0: // Stack Manipulation
                 parseStackManipulation();
@@ -95,6 +93,7 @@ public class WhitespaceInterpreter {
                 break;
             default: // 1
                 IMP = readNext();
+                //noinspection EnhancedSwitchMigration
                 switch (IMP) {
                     case 0: // Arithmetic
                         parseArithmetic();
@@ -112,6 +111,7 @@ public class WhitespaceInterpreter {
     private void parseStackManipulation() {
         int cmd = readNext();
         int n;
+        //noinspection EnhancedSwitchMigration
         switch (cmd) {
             case 0:
                 // Push n onto the stack
@@ -122,6 +122,7 @@ public class WhitespaceInterpreter {
                 break;
             case 1:
                 cmd = readNext();
+                //noinspection EnhancedSwitchMigration
                 switch (cmd) {
                     case 0:
                         // (number): Duplicate the nth value from the top of the stack and push onto the stack.
@@ -146,6 +147,7 @@ public class WhitespaceInterpreter {
                 break;
             default:
                 cmd = readNext();
+                //noinspection EnhancedSwitchMigration
                 switch (cmd) {
                     case 0:
                         // Duplicate the top value on the stack.
@@ -167,9 +169,11 @@ public class WhitespaceInterpreter {
 
     private void parseArithmetic() {
         int cmd = readNext();
+        //noinspection EnhancedSwitchMigration
         switch (cmd) {
             case 0:
                 cmd = readNext();
+                //noinspection EnhancedSwitchMigration
                 switch (cmd) {
                     case 0: //0: Pop a and b, then push b+a.
                         pseudocode.add(ADD);
@@ -187,6 +191,7 @@ public class WhitespaceInterpreter {
                 break;
             case 1:
                 cmd = readNext();
+                //noinspection EnhancedSwitchMigration
                 switch (cmd) {
                     case 0: // Pop a and b, then push b/a. If a is zero, throw an error.
                         // Note that the result is defined as the floor of the quotient.
@@ -211,9 +216,11 @@ public class WhitespaceInterpreter {
     private void parseFlowControl() {
         int cmd = readNext();
         int label;
+        //noinspection EnhancedSwitchMigration
         switch (cmd) {
             case 0:
                 cmd = readNext();
+                //noinspection EnhancedSwitchMigration
                 switch (cmd) {
                     case 0: // (label): Mark a location in the program with label n.
                         // no pseudocode for label
@@ -236,6 +243,7 @@ public class WhitespaceInterpreter {
                 break;
             case 1:
                 cmd = readNext();
+                //noinspection EnhancedSwitchMigration
                 switch (cmd) {
                     case 0:
                         // (label): Pop a value off the stack and jump to the label specified by n if the value is zero.
@@ -245,18 +253,16 @@ public class WhitespaceInterpreter {
                         debug.append("Jump0(").append(label).append(")\n");
                         break;
                     case 1:
-                        //* `[tab][tab]` (label): Pop a value off the stack and jump to the label specified by n if the value is less than zero.
+                        //* (label): Pop a value off the stack and jump to the label specified by n if the value is less than zero.
                         pseudocode.add(JUMP_N);
                         label = readLabel();
                         pseudocode.add(label);
                         debug.append("JumpN(").append(label).append(")\n");
                         break;
                     default:
-                        //* `[tab][line-feed]`: Exit a subroutine and return control to the location from which the subroutine was called.
-                        pseudocode.add(JUMP_P);
-                        label = readLabel();
-                        pseudocode.add(label);
-                        debug.append("JumpP(").append(label).append(")\n");
+                        //* Exit a subroutine and return control to the location from which the subroutine was called.
+                        pseudocode.add(RETN);
+                        debug.append("Return");
                 }
                 break;
             default:
@@ -269,10 +275,12 @@ public class WhitespaceInterpreter {
 
     private void parseInputOutput() {
         int cmd = readNext();
+        //noinspection EnhancedSwitchMigration
         switch (cmd) {
             case 0:
                 // Pop and output
                 cmd = readNext();
+                //noinspection EnhancedSwitchMigration
                 switch (cmd) {
                     case 0:
                         // Pop a value off the stack and output it as a character
@@ -290,6 +298,7 @@ public class WhitespaceInterpreter {
                 break;
             case 1: // Read ...
                 cmd = readNext();
+                //noinspection EnhancedSwitchMigration
                 switch (cmd) {
                     case 0:
                         // Read a character from input, a, Pop a value off the stack, b, then store the ASCII value of a at heap address b.
@@ -312,6 +321,7 @@ public class WhitespaceInterpreter {
 
     private void parseHeapAccess() {
         int cmd = readNext();
+        //noinspection EnhancedSwitchMigration
         switch (cmd) {
             case 0:
                 // Pop a and b, then store a at heap address b.
@@ -341,8 +351,7 @@ public class WhitespaceInterpreter {
      * @return label as a number
      */
     private int readLabel() {
-        int number = readBinary(1);
-        return number;
+        return readBinary(1);
     }
 
     /**
@@ -395,10 +404,10 @@ public class WhitespaceInterpreter {
     public String execute(InputStream rawInput) {
         BufferedReader input = rawInput == null ? null :
                 new BufferedReader(new InputStreamReader(rawInput, StandardCharsets.UTF_8));
-        output = new StringBuilder();
+        StringBuilder output = new StringBuilder();
         stack = new Stack<>();
-        returnLocation = new Stack<>();
-        heap = new HashMap<>();
+        Stack<Integer> returnLocation = new Stack<>();
+        Map<Integer, Integer> heap = new HashMap<>();
         executing = true;
         location = 0;
         int n;
@@ -407,6 +416,7 @@ public class WhitespaceInterpreter {
         while (executing && location < pseudocode.size()){
             debug.append("[").append(location).append("]");
             int action = nextInteger();
+            //noinspection EnhancedSwitchMigration
             switch (action){
                 case PUSH_N:
                     n = nextInteger();
@@ -519,16 +529,10 @@ public class WhitespaceInterpreter {
                         location = labels.get(label);
                         debug.append(", ").append(location);
                     }
-                    debug.append(", NJ");
                     break;
-                case JUMP_P:
-                    label = nextInteger();
-                    n = popFromStack();
-                    if (n > 0){
-                        location = labels.get(label);
-                        debug.append(", ").append(location);
-                    }
-                    debug.append(", NJ");
+                case RETN:
+                    location = returnLocation.pop();
+                    debug.append(", ").append(location);
                     break;
                 case HEAP_S:
                     n = popFromStack();
@@ -544,6 +548,7 @@ public class WhitespaceInterpreter {
                     break;
                 case GETC:
                     try {
+                        assert input != null;
                         n = input.read();
                     } catch (IOException e) {
                         throw new RuntimeException("Error reading from input: " +e.getMessage());
@@ -555,6 +560,7 @@ public class WhitespaceInterpreter {
                     break;
                 case GETN:
                     try {
+                        assert input != null;
                         String number = input.readLine();
                         n = Integer.parseInt(number);
                     } catch (IOException e) {
