@@ -406,7 +406,7 @@ public class WhitespaceInterpreter {
                 case DISC_N:
                     n = nextInteger();
                     m = popFromStack(); // top of stack
-                    while (!stack.empty() && n != 0){   // TODO: possible fix so will remove lots!
+                    while (!stack.empty() && n != 0){
                         popFromStack();
                         n--;
                     }
@@ -517,7 +517,7 @@ public class WhitespaceInterpreter {
                     } catch (IOException e) {
                         throw new Error("Error reading from input: " +e.getMessage());
                     }
-                    if (n < 0) // TODO: Cat program will no longer work!
+                    if (n < 0) // Note: Cat program will no longer work!
                         throw new RuntimeException("Input has run out!");
                     // only for debug! System.out.println("Read in: " + n);
                     m = popFromStack();
@@ -561,7 +561,7 @@ public class WhitespaceInterpreter {
     }
 
     private int popFromStack() {
-        try{ // TODO: may wish to remove the extra wrapping to get it to pass Kata!
+        try{
             return stack.pop();
         }
         catch (EmptyStackException e){
