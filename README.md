@@ -50,9 +50,11 @@ file to explain it.
 
 ## Morse Code Decoder
 This is a three part kata, so will get harder ...
-* [Simple Morse Code Decoder](https://www.codewars.com/kata/decode-the-morse-code)
-* [Morse code decoder for wired electrical telegraph](https://www.codewars.com/kata/decode-the-morse-code-advanced)
-* [Decode the Morse code, for real](https://www.codewars.com/kata/decode-the-morse-code-for-real)
+* [Morse Code Decoder](https://www.codewars.com/kata/decode-the-morse-code) as simple as they come.
+* [Decode the Morse code, advanced](https://www.codewars.com/kata/decode-the-morse-code-advanced) 
+  as if it was from a wired electrical telegraph.
+* [Decode the Morse code, for real](https://www.codewars.com/kata/decode-the-morse-code-for-real), 
+  yep now we are talking!
 
 ## Closest pair of points in linearithmic time
 For my next trick: [Closest pair of points in linearithmic time](https://www.codewars.com/kata/5376b901424ed4f8c20002b7).  

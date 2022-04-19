@@ -23,13 +23,13 @@
  * The Morse code table is preloaded for you as a dictionary, feel free to use it:
  * MorseCode.get(".--")
  */
-public class MorseCodeDecoder {
+public class MorseCodeDecoderVerbose {
 
     private final char[] code;
     private int next;
 
 
-    public MorseCodeDecoder(String morseCode){
+    public MorseCodeDecoderVerbose(String morseCode){
         code = morseCode.trim().toCharArray();
         next = 0;
     }
@@ -77,7 +77,7 @@ public class MorseCodeDecoder {
      */
     public static String decode(String morseCode) {
         StringBuilder message = new StringBuilder();
-        MorseCodeDecoder decoder = new MorseCodeDecoder(morseCode);
+        MorseCodeDecoderVerbose decoder = new MorseCodeDecoderVerbose(morseCode);
         while (decoder.more()){
             String code = decoder.getCode();
             message.append(MorseCode.get(code));
