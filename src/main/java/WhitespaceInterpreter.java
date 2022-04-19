@@ -4,6 +4,7 @@ import java.util.*;
 
 public class WhitespaceInterpreter {
 
+    public static final int BAD = -1; // for bad codes!
     public static final int PUSH_N = 900; // random seed
     public static final int DUPE_N = PUSH_N + 1;
     public static final int DISC_N = DUPE_N + 1;
@@ -28,13 +29,11 @@ public class WhitespaceInterpreter {
     public static final int HEAP_S = GETN + 1;
     public static final int HEAP_G = HEAP_S + 1;
 
-    private StringBuilder debug;
     private final List<Integer> pseudocode;
     private final Map<Integer, Integer> labels;
     private int location;
     private Stack<Integer> stack;
     private final Integer[] codeArray;
-    private boolean executing;
 
     /**
      * Take whitespace code and convert to code array (of 0, 1  & -1).
@@ -48,23 +47,11 @@ public class WhitespaceInterpreter {
      */
     public WhitespaceInterpreter(String code) {
         codeArray = toCodes(code);
-        debug = new StringBuilder();
         pseudocode = new ArrayList<>();
         labels = new HashMap<>();
         location = 0;
-        executing = true;
-        try {
-            while (executing && location < codeArray.length){
-                parseIMP();
-            }
-        }
-        catch (RuntimeException e){
-            System.out.println("Parse error: " + debug);
-            System.out.println("Labels: " + labels.size());
-            for (int label: labels.keySet()) {
-                System.out.println("   " + label + ": " + labels.get(label));
-            }
-            throw e;
+        while (location < codeArray.length - 1){
+            parseIMP();
         }
     }
 
@@ -72,12 +59,17 @@ public class WhitespaceInterpreter {
      * Parse methods
      */
 
+    private void badInstruction() {
+        pseudocode.add(BAD);
+        // end parsing
+        location = codeArray.length;
+    }
+
     private Integer readNext() {
         if (location >= codeArray.length)
-            throw new RuntimeException("Early end of code");
+            throw new Error("Early end of code");
         int code = codeArray[location];
         location++;
-        debug.append((code == 0) ? '0' : (code > 0) ? '+' : '-');
         return code;
     }
 
@@ -118,7 +110,6 @@ public class WhitespaceInterpreter {
                 pseudocode.add(PUSH_N);
                 n = readN();
                 pseudocode.add(n);
-                debug.append("push(").append(n).append(")\n");
                 break;
             case 1:
                 cmd = readNext();
@@ -129,9 +120,8 @@ public class WhitespaceInterpreter {
                         pseudocode.add(DUPE_N);
                         n = readN();
                         if (n < 0) // don't think this should support -nth from top of stack!
-                            throw new RuntimeException("Not a valid stack manipulation command");
+                            throw new RuntimeException("Invalid parameter");
                         pseudocode.add(n);
-                        debug.append("dupe(").append(n).append(")\n");
                         break;
                     case -1:
                         // (number): Discard the top n values below the top of the stack from the stack.
@@ -139,10 +129,9 @@ public class WhitespaceInterpreter {
                         pseudocode.add(DISC_N);
                         n = readN();
                         pseudocode.add(n);
-                        debug.append("disc(").append(n).append(")\n");
                         break;
                     default: // 1
-                        throw new RuntimeException("Not a valid stack manipulation command");
+                        badInstruction();
                 }
                 break;
             default:
@@ -152,17 +141,14 @@ public class WhitespaceInterpreter {
                     case 0:
                         // Duplicate the top value on the stack.
                         pseudocode.add(DUPE);
-                        debug.append("dupe");
                         break;
                     case 1:
                         // Swap the top two value on the stack.
                         pseudocode.add(SWAP);
-                        debug.append("swap");
                         break;
                     default:
                         // -1 - Discard the top value on the stack.
                         pseudocode.add(DISC);
-                        debug.append("disc");
                 }
         }
     }
@@ -177,16 +163,13 @@ public class WhitespaceInterpreter {
                 switch (cmd) {
                     case 0: //0: Pop a and b, then push b+a.
                         pseudocode.add(ADD);
-                        debug.append("add");
                         break;
                     case 1: //1: Pop a and b, then push b-a.
                         pseudocode.add(SUB);
-                        debug.append("sub");
                         break;
                     default:
                         //-1: Pop a and b, then push b*a.
                         pseudocode.add(MUL);
-                        debug.append("mul");
                 }
                 break;
             case 1:
@@ -196,20 +179,18 @@ public class WhitespaceInterpreter {
                     case 0: // Pop a and b, then push b/a. If a is zero, throw an error.
                         // Note that the result is defined as the floor of the quotient.
                         pseudocode.add(DIV);
-                        debug.append("div");
                         break;
                     case 1:
                         // Pop a and b, then push b%a. If a is zero, throw an error.
                         // Note that the result is defined as the remainder after division and sign (+/-) of the divisor (a).
                         pseudocode.add(MOD);
-                        debug.append("mod");
                         break;
                     default:
-                        throw new RuntimeException("Not a valid arithmetic command");
+                        badInstruction();
                 }
                 break;
             default:
-                throw new RuntimeException("Not a valid arithmetic command");
+                badInstruction();
         }
     }
 
@@ -225,20 +206,18 @@ public class WhitespaceInterpreter {
                     case 0: // (label): Mark a location in the program with label n.
                         // no pseudocode for label
                         label = readLabel();
-                        labels.put(label, pseudocode.size()); // address of next executable instruction
-                        debug.append("Lbl(").append(label).append(")\n");
+                        if (null != labels.put(label, pseudocode.size())) // address of next executable instruction
+                            labels.put(label, -1); //throw new Error("multiple label definition");
                         break;
                     case 1: // (label): Call a subroutine with the location specified by label n.
                         pseudocode.add(CALL);
                         label = readLabel();
                         pseudocode.add(label);
-                        debug.append("Call(").append(label).append(")\n");
                         break;
                     default: // (label): Jump unconditionally to the position specified by label n.
                         pseudocode.add(JUMP);
                         label = readLabel();
                         pseudocode.add(label);
-                        debug.append("Jump(").append(label).append(")\n");
                 }
                 break;
             case 1:
@@ -250,26 +229,26 @@ public class WhitespaceInterpreter {
                         pseudocode.add(JUMP_Z);
                         label = readLabel();
                         pseudocode.add(label);
-                        debug.append("Jump0(").append(label).append(")\n");
                         break;
                     case 1:
                         //* (label): Pop a value off the stack and jump to the label specified by n if the value is less than zero.
                         pseudocode.add(JUMP_N);
                         label = readLabel();
                         pseudocode.add(label);
-                        debug.append("JumpN(").append(label).append(")\n");
                         break;
                     default:
                         //* Exit a subroutine and return control to the location from which the subroutine was called.
                         pseudocode.add(RETN);
-                        debug.append("Return");
                 }
                 break;
             default:
+                cmd = readNext();
+                if (cmd != -1)
+                    badInstruction();
                 // Exit the program.
                 pseudocode.add(FINE);
-                debug.append("END!\n\n");
-                executing = false;
+                // Opps! of course the program can be beyond the first end point!
+                // executing = false;
         }
     }
 
@@ -285,15 +264,13 @@ public class WhitespaceInterpreter {
                     case 0:
                         // Pop a value off the stack and output it as a character
                         pseudocode.add(OUTC);
-                        debug.append("OutC");
                         break;
                     case 1:
                         // Pop a value off the stack and output it as a number.
                         pseudocode.add(OUTN);
-                        debug.append("OutN");
                         break;
                     default: // Invalid command
-                            throw new RuntimeException("Not a valid input / output command");
+                        badInstruction();
                 }
                 break;
             case 1: // Read ...
@@ -303,19 +280,17 @@ public class WhitespaceInterpreter {
                     case 0:
                         // Read a character from input, a, Pop a value off the stack, b, then store the ASCII value of a at heap address b.
                         pseudocode.add(GETC);
-                        debug.append("GetC");
                         break;
                     case 1:
                         // Read a number from input, a, Pop a value off the stack, b, then store a at heap address b.
                         pseudocode.add(GETN);
-                        debug.append("GetN");
                         break;
                     default: // Invalid command
-                        throw new RuntimeException("Not a valid input / output command");
+                        badInstruction();
                 }
                 break;
             default: // Invalid command
-                    throw new RuntimeException("Not a valid input / output command");
+                badInstruction();
         }
     }
 
@@ -326,15 +301,13 @@ public class WhitespaceInterpreter {
             case 0:
                 // Pop a and b, then store a at heap address b.
                 pseudocode.add(HEAP_S);
-                debug.append("HeapS");
                 break;
             case 1:
                 // Pop a and then push the value at heap address a onto the stack.
                 pseudocode.add(HEAP_G);
-                debug.append("HeapG");
                 break;
             default: // Invalid command
-                throw new RuntimeException("Not a valid heap access command");
+                badInstruction();
         }
     }
 
@@ -402,31 +375,32 @@ public class WhitespaceInterpreter {
     }
 
     public String execute(InputStream rawInput, OutputStream outputStream) throws IOException {
-        BufferedReader input = rawInput == null ? null :
-                new BufferedReader(new InputStreamReader(rawInput, StandardCharsets.UTF_8));
+        BufferedReader input = null;
+        if (rawInput != null){
+            input = new BufferedReader(new InputStreamReader(rawInput, StandardCharsets.UTF_8));
+        }
         StringBuilder output = new StringBuilder();
+        if (outputStream != null)
+            outputStream.flush();
         stack = new Stack<>();
         Stack<Integer> returnLocation = new Stack<>();
         Map<Integer, Integer> heap = new HashMap<>();
-        executing = true;
+        boolean executing = true;
         location = 0;
         int n;
         int m;
         int label;
         while (executing && location < pseudocode.size()){
-            debug.append("[").append(location).append("]");
             int action = nextInteger();
             //noinspection EnhancedSwitchMigration
             switch (action){
                 case PUSH_N:
                     n = nextInteger();
-                    debug.append(", ").append(n);
                     pushToStack(n);
                     break;
                 case DUPE_N:
                     n = nextInteger();
                     m = stack.elementAt(stack.size() - 1 - n);
-                    debug.append(", ").append(m);
                     pushToStack(m);
                     break;
                 case DISC_N:
@@ -441,15 +415,12 @@ public class WhitespaceInterpreter {
                 case DUPE:
                     n = popFromStack();
                     pushToStack(n);
-                    debug.append(", ").append(n);
                     pushToStack(n);
                     break;
                 case SWAP:
                     n = popFromStack();
                     m = popFromStack();
-                    debug.append(", ").append(n);
                     pushToStack(n);
-                    debug.append(", ").append(m);
                     pushToStack(m);
                     break;
                 case DISC:
@@ -458,7 +429,6 @@ public class WhitespaceInterpreter {
                 case FINE:
                     executing = false;
                     location = pseudocode.size(); // make sure we stop here
-                    debug.append("!!!");
                     break;
                 case OUTC:
                     n = popFromStack();
@@ -475,40 +445,34 @@ public class WhitespaceInterpreter {
                 case CALL:
                     label = nextInteger();
                     returnLocation.push(location);
-                    location = labels.get(label);
-                    debug.append(", ").append(location);
+                    setLocation(label);
                     break;
                 case JUMP:
                     label = nextInteger();
-                    location = labels.get(label);
-                    debug.append(", ").append(location);
+                    setLocation(label);
                     break;
                 case ADD:
                     n = popFromStack();
                     m = popFromStack();
                     m += n;
-                    debug.append(", ").append(m);
                     pushToStack(m);
                     break;
                 case SUB:
                     n = popFromStack();
                     m = popFromStack();
                     m -= n;
-                    debug.append(", ").append(m);
                     pushToStack(m);
                     break;
                 case MUL:
                     n = popFromStack();
                     m = popFromStack();
                     m *= n;
-                    debug.append(", ").append(m);
                     pushToStack(m);
                     break;
                 case DIV:
                     n = popFromStack();
                     m = popFromStack();
                     m = Math.floorDiv(m, n);
-                    debug.append(", ").append(m);
                     pushToStack(m);
                     break;
                 case MOD:
@@ -517,54 +481,47 @@ public class WhitespaceInterpreter {
                     m = popFromStack();
                     if (m != 0)
                         m = m - n * Math.floorDiv(m, n);
-                    debug.append(", ").append(m);
                     pushToStack(m);
                     break;
                 case JUMP_Z:
                     label = nextInteger();
                     n = popFromStack();
                     if (n == 0) {
-                        location = labels.get(label);
-                        debug.append(", ").append(location);
+                        setLocation(label);
                     }
                     break;
                 case JUMP_N:
                     label = nextInteger();
                     n = popFromStack();
                     if (n < 0){
-                        location = labels.get(label);
-                        debug.append(", ").append(location);
+                        setLocation(label);
                     }
                     break;
                 case RETN:
                     location = returnLocation.pop();
-                    debug.append(", ").append(location);
                     break;
                 case HEAP_S:
                     n = popFromStack();
                     m = popFromStack();
                     heap.put(m, n);
-                    debug.append(", ").append(m).append("(").append(n).append(")");
                     break;
                 case HEAP_G:
                     n = popFromStack();
                     m = heap.get(n);
                     pushToStack(m);
-                    debug.append(", ").append(n).append("(").append(m).append(")");
                     break;
                 case GETC:
                     try {
                         assert input != null;
                         n = input.read();
                     } catch (IOException e) {
-                        throw new RuntimeException("Error reading from input: " +e.getMessage());
+                        throw new Error("Error reading from input: " +e.getMessage());
                     }
                     if (n < 0) // TODO: Cat program will no longer work!
                         throw new RuntimeException("Input has run out!");
                     // only for debug! System.out.println("Read in: " + n);
                     m = popFromStack();
                     heap.put(m, n);
-                    debug.append(", ").append(m).append("(").append(n).append(")");
                     break;
                 case GETN:
                     try {
@@ -572,19 +529,31 @@ public class WhitespaceInterpreter {
                         String number = input.readLine();
                         n = Integer.parseInt(number);
                     } catch (IOException e) {
-                        throw new RuntimeException("Error reading from input: " +e.getMessage());
+                        throw new Error("Error reading from input: " +e.getMessage());
+                    } catch (NumberFormatException e){
+                        throw new RuntimeException("Error reading a number: " +e.getMessage());
                     }
                     m = popFromStack();
                     heap.put(m, n);
-                    debug.append(", ").append(m).append("(").append(n).append(")");
                     break;
                 default:
-                    throw new RuntimeException("Process Pseudocode not written yet!");
+                    throw new RuntimeException("Trying to execute unrecognised code");
             }
         }
         if (executing) // not finished properly
             throw new RuntimeException("Code ended before execution completed");
+        if (outputStream != null)
+            outputStream.flush();
         return output.toString();
+    }
+
+    private void setLocation(int label) {
+        Integer integer = labels.get(label);
+        if (integer == null)
+            throw new RuntimeException("Trying to reach undefined label");
+        location = integer;
+        if (location < 0)
+            throw new RuntimeException("Trying to reach multiply defined label");
     }
 
     private void pushToStack(int number) {
@@ -617,8 +586,8 @@ public class WhitespaceInterpreter {
                 .map(c -> (c == ' ') ? 0 : (c == '\t') ? 1 : -1)
                 .boxed()
                 .toArray(Integer[]::new);
-                //.collect(Collectors.toList())
-                //.toArray(new Integer[0]);
+        //.collect(Collectors.toList())
+        //.toArray(new Integer[0]);
     }
 
     /**
@@ -643,30 +612,13 @@ public class WhitespaceInterpreter {
      */
     // solution
     public static String execute(String code, InputStream inputStream, OutputStream outputStream) {
-        WhitespaceInterpreter whitespaceInterpreter = new WhitespaceInterpreter(code);
-        System.out.println("Parse: " + whitespaceInterpreter.debug);
-        System.out.println("Labels: " + whitespaceInterpreter.labels.size());
-        for (int label: whitespaceInterpreter.labels.keySet()) {
-            System.out.println("   " + label + ": " + whitespaceInterpreter.labels.get(label));
-        }
-        whitespaceInterpreter.debug = new StringBuilder(); // reset
-        String output = "Nothing";
         try {
-            output = whitespaceInterpreter.execute(inputStream, outputStream);
-            System.out.println("Debug: " + whitespaceInterpreter.debug);
-            System.out.println("Output: " + output);
-        } catch (RuntimeException r){
-            System.out.println("Runtime Error: " + r.getMessage());
-            System.out.println("Debug: " + whitespaceInterpreter.debug);
-            System.out.println("Output: " + output);
-            throw r;
-        } catch (IOException io) {
-            System.out.println("IOException: " + io.getMessage());
-            System.out.println("Debug: " + whitespaceInterpreter.debug);
-            System.out.println("Output: " + output);
-            throw new RuntimeException("IOException: " + io.getMessage());
+            if (outputStream != null) outputStream.flush();
+            WhitespaceInterpreter whitespaceInterpreter = new WhitespaceInterpreter(code);
+            return whitespaceInterpreter.execute(inputStream, outputStream);
+        } catch (IOException e) {
+            throw new Error(e);
         }
-        return output;
     }
 
 }

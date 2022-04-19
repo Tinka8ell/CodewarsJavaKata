@@ -1,3 +1,4 @@
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -37,7 +38,7 @@ class WhitespaceInterpreterTest {
     @Test
     public void testFlowEdge() {
         System.out.println("Testing simple flow control edge case");
-        assertThrows(RuntimeException.class, () -> WhitespaceInterpreter.execute("", null));
+        assertThrows(Exception.class, () -> WhitespaceInterpreter.execute("", null));
     }
 
     @Test
@@ -116,6 +117,7 @@ class WhitespaceInterpreterTest {
                 T\tL
                 S S L
                 L
+                L
                 L""";
         /*
          * 000+00+000-push(72)
@@ -137,6 +139,7 @@ class WhitespaceInterpreterTest {
     }
 
     @Test
+    @Disabled // as whitespace does not handle end of input
     public void testCatProgram(){
         /*
          * This will output whatever is on it's input ...
@@ -186,6 +189,7 @@ class WhitespaceInterpreterTest {
     }
 
     @Test
+    @Disabled // as this code would produce infinite output ...
     public void testTruthMachine(){
         String test = """
                 S S S L
@@ -284,7 +288,7 @@ class WhitespaceInterpreterTest {
                 S T\tL
                 L
                 """;
-        assertThrows(RuntimeException.class, () -> WhitespaceInterpreter.execute(code, null));
+        assertThrows(Error.class, () -> WhitespaceInterpreter.execute(code, null));
 
         String code2 = """
                 S S S T\tL
@@ -308,6 +312,7 @@ class WhitespaceInterpreterTest {
                 T\tS T\tS T\tL
                 S T\tL
                 L
+                L
                 """;
         String expected = "-3";
         assertEquals(expected, WhitespaceInterpreter.execute(code, null), "Floor Divide");
@@ -317,6 +322,7 @@ class WhitespaceInterpreterTest {
                 S S T\tT\tS L
                 T\tS T\tT\tT\tL
                 S T\tL
+                L
                 L
                 """;
         expected = "-1";
@@ -328,6 +334,7 @@ class WhitespaceInterpreterTest {
                 T\tS T\tT\tT\tL
                 S T\tL
                 L
+                L
                 """;
         expected = "-1";
         assertEquals(expected, WhitespaceInterpreter.execute(code, null), "remainder with the sign of the divisor");
@@ -338,6 +345,7 @@ class WhitespaceInterpreterTest {
                 T\tS T\tT\tT\tL
                 S T\tL
                 L
+                L
                 """;
         expected = "1";
         assertEquals(expected, WhitespaceInterpreter.execute(code, null), "remainder with the sign of the divisor");
@@ -347,6 +355,7 @@ class WhitespaceInterpreterTest {
                 S S S T\tT\tL
                 T\tS T\tT\tT\tL
                 S T\tL
+                L
                 L
                 """;
         expected = "1";
@@ -378,6 +387,7 @@ class WhitespaceInterpreterTest {
                 S S T\tL
                 S S L
                 L
+                L
                 """;
         String expected = "Hello";
         InputStream input = new ByteArrayInputStream(expected.getBytes());
@@ -385,8 +395,33 @@ class WhitespaceInterpreterTest {
 
         String shortened = "Hell";
         InputStream shortInput = new ByteArrayInputStream(shortened.getBytes());
-        assertThrows(RuntimeException.class, () -> WhitespaceInterpreter.execute(code, shortInput), "Should run out of input");
+        assertThrows(Exception.class, () -> WhitespaceInterpreter.execute(code, shortInput), "Should run out of input");
     }
+
+    @Test
+    public void checkEndOfInputLines(){
+        String code = """
+                S S S T\tL
+                T\tL
+                T\tT\tS S S T\tL
+                T\tT\tT\tT\tL
+                S T\tS S S T\tS L
+                T\tL
+                T\tT\tS S S T\tS L
+                T\tT\tT\tT\tL
+                S T\tS S S T\tT\tL
+                T\tL
+                T\tT\tS S S T\tT\tL
+                L
+                L
+                L
+                """;
+        String expected = "1\n2\n";
+        InputStream input = new ByteArrayInputStream(expected.getBytes());
+        assertThrows(RuntimeException.class, () -> WhitespaceInterpreter.execute(code, input), "Should run out of input lines");
+    }
+    /*
+     */
 
     @Test
     public void checkJumpForward(){
@@ -404,452 +439,58 @@ class WhitespaceInterpreterTest {
                 S T\tT\tL
                 S T\tL
                 L
+                L
                 """;
         String expected = "321";
         InputStream input = new ByteArrayInputStream(expected.getBytes());
         assertEquals(expected, WhitespaceInterpreter.execute(code, input), "Jump forward");
     }
 
+    @Test
+    public void checkDoubleLabels(){
+        String code = """
+                S S S T\tL
+                S S S T\tS L
+                S S S T\tT\tL
+                T\tL
+                S T\tL
+                S L
+                L
+                T\tL
+                S T\tT\tL
+                S T\tL
+                S S L
+                L
+                S S L
+                L
+                L
+                """;
+        assertThrows(Error.class, () -> WhitespaceInterpreter.execute(code, null), "Duplicated labels");
+    }
+
+    @Test
+    public void checkUnknownInstruction(){
+        String code = """
+                S S S T\tL
+                T\tL
+                T\tT\tS S S T\tL
+                T\tT\tT\tT\tL
+                S T\tS S S T\tS L
+                T\tL
+                T\tT\tS S S T\tS L
+                T\tT\tT\tT\tL
+                S T\tS S S T\tT\tL
+                T\tL
+                T\tT\tS S S T\tT\tL
+                T\tT\tL
+                """;
+        String something = "Something";
+        InputStream input = new ByteArrayInputStream(something.getBytes());
+        assertThrows(Exception.class, () -> WhitespaceInterpreter.execute(code, input), "Unknown instruction");
+    }
+
     /*
     Extra test cases!!!
-000+-push(1)
-000+0-push(2)
-000++-push(3)
-+-0+OutN-0--Jump(1)
--00+-Lbl(3)
-+-0+OutN+-0+OutN--END!
-
-
-Labels: 1
-   3: 9
-Runtime Error: Cannot invoke "java.lang.Integer.intValue()" because the return value of "java.util.Map.get(Object)" is null
-Debug: [0], 1[2], 2[4], 3[6][7]
-Output: Nothing
-Exception not expected: java.lang.NullPointerException: Cannot invoke "java.lang.Integer.intValue()" because the return value of "java.util.Map.get(Object)" is null
-
-
-Log
-Parse: 000+-push(1)
-000+0-push(2)
-000++-push(3)
-+-0+OutN-0--Jump(1)
-+-0+OutN+-0+OutN-00-Lbl(1)
--00-Lbl(1)
---END!
-
-
-Labels: 1
-   1: 11
-Debug: [0], 1[2], 2[4], 3[6][7], 11[11]!!!
-Output: 3
-Expecting exception for repeated labels
-
-Log
-Parse: 000+-push(1)
-000+0-push(2)
-000++-push(3)
-+-0+OutN-0--Jump(1)
-+-0+OutN+-0+OutN-00-Lbl(1)
--00-Lbl(1)
--00-Lbl(1)
---END!
-
-
-Labels: 1
-   1: 11
-Debug: [0], 1[2], 2[4], 3[6][7], 11[11]!!!
-Output: 3
-Expecting exception for repeated labels
-
-Log
-Parse: 000+0-push(2)
--0+0-Call(2)
-000++-push(3)
--0+0-Call(2)
-000+-push(1)
--0+0-Call(2)
---END!
-
-
-Labels: 0
-Runtime Error: Cannot invoke "java.lang.Integer.intValue()" because the return value of "java.util.Map.get(Object)" is null
-Debug: [0], 2[2]
-Output: Nothing
-Exception not expected: java.lang.NullPointerException: Cannot invoke "java.lang.Integer.intValue()" because the return value of "java.util.Map.get(Object)" is null
-
-Log
-Parse: 000+-push(1)
--0+0-Call(2)
-000+0-push(2)
--0+0-Call(2)
-000++-push(3)
--0+0-Call(2)
---END!
-
-
-Labels: 0
-Runtime Error: Cannot invoke "java.lang.Integer.intValue()" because the return value of "java.util.Map.get(Object)" is null
-Debug: [0], 1[2]
-Output: Nothing
-Exception not expected: java.lang.NullPointerException: Cannot invoke "java.lang.Integer.intValue()" because
-
-Log
-Parse: --END!
-
-
-Labels: 0
-Debug: [0]!!!
-Output:
-Expecting exception for invalid commands
-
-Log
-Parse: 00++-push(-1)
---END!
-
-
-Labels: 0
-Debug: [0], -1[2]!!!
-Output:
-Expecting exception for invalid commands
-
-Log
-Parse: 000+-push(1)
-+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], 1[2][3]!!!
-Output: 1
-expected:<1> but was:<null>
-
-Log
-Parse: 000+-push(1)
-000+-push(1)
-000+0-push(2)
-++0HeapS+++HeapG+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], 1[2], 1[4], 2[6], 1(2)[7], 1(2)[8][9]!!!
-Output: 2
-expected:<2> but was:<null>
-
-Log
-Parse:
-Labels: 0
-Runtime Error: Code ended before execution completed
-Debug:
-Output: Nothing
-Expected exception for unclean termination caught: java.lang.RuntimeException: Code ended before execution completed
-unclean termination expected:<1> but was:<null>
-
-Log
-Parse: --END!
-
-
-Labels: 0
-Debug: [0]!!!
-Output:
-expected:<1> but was:<null>
-
-Log
-Parse error: 000+-push(1)
-+-++GetN000+-push(1)
-+++HeapG+-0+OutN000+0-push(2)
-+-++GetN000+0-push(2)
-+++HeapG+-0+OutN000++-push(3)
-+-++GetN000++-push(3)
-++-
-Labels: 0
-Expected exception for unknown instruction caught: java.lang.RuntimeException: Not a valid heap access command
-unknown instruction expected:<[12]> but was:<[]>
-
-Log
-Parse: 000+-push(1)
-000+0-push(2)
-000++-push(3)
-+-0+OutN-0--Jump(1)
-+-0+OutN+-0+OutN-00-Lbl(1)
--00-Lbl(1)
---END!
-
-
-Labels: 1
-   1: 11
-Debug: [0], 1[2], 2[4], 3[6][7], 11[11]!!!
-Output: 3
-Expecting exception for multiple label
-
-Log
-Parse: 000+-push(1)
-000+0-push(2)
-000++-push(3)
-+-0+OutN-0--Jump(1)
-+-0+OutN+-0+OutN-00-Lbl(1)
--00-Lbl(1)
---END!
-
-
-Labels: 1
-   1: 11
-Debug: [0], 1[2], 2[4], 3[6][7], 11[11]!!!
-Output: 3
-Expecting exception for repeated labels
-
-Log
-Parse: 000+-push(1)
-000+0-push(2)
-000++-push(3)
-+-0+OutN-0--Jump(1)
-+-0+OutN+-0+OutN-00-Lbl(1)
--00-Lbl(1)
--00-Lbl(1)
---END!
-
-
-Labels: 1
-   1: 11
-Debug: [0], 1[2], 2[4], 3[6][7], 11[11]!!!
-Output: 3
-Expecting exception for repeated labels
-
-Log
-Parse: 00++000-push(-8)
-000++-push(3)
-+0+0div+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], -8[2], 3[4], -2[5][6]!!!
-Output: -2
-Should use floor division expected:<-[3]> but was:<-[2]>
-
-og
-Parse: 000+0+-push(5)
-00++0-push(-2)
-+0++mod+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], 5[2], -2[4], 1[5][6]!!!
-Output: 1
-Should be the remainder with the sign of the divisor expected:<[-]1> but was:<[]1>
-
-Log
-Parse: 000+0+-push(5)
-00+++-push(-3)
-+0++mod+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], 5[2], -3[4], 2[5][6]!!!
-Output: 2
-Should be the remainder with the sign of the divisor expected:<[-1]> but was:<[2]>
-
-Log
-Parse: 00++0+-push(-5)
-000+0-push(2)
-+0++mod+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], -5[2], 2[4], -1[5][6]!!!
-Output: -1
-Should be the remainder with the sign of the divisor expected:<[]1> but was:<[-]1>
-
-Log
-Parse: 00++0+-push(-5)
-000++-push(3)
-+0++mod+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], -5[2], 3[4], -2[5][6]!!!
-Output: -2
-Should be the remainder with the sign of the divisor expected:<[1]> but was:<[-2]>
-
-Log
-Parse: 000+-push(1)
-000+0-push(2)
-000++-push(3)
-0+-++00000-disc(-32)
-+-0+OutN+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], 1[2], 2[4], 3[6][8][9][10]!!!
-Output: 32
-Expecting exception for out of bound index
-
-Log
-Parse: 000+-push(1)
-000+0-push(2)
-000++-push(3)
-0+-+0+00-disc(-4)
-+-0+OutN+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], 1[2], 2[4], 3[6][8][9][10]!!!
-Output: 32
-Expecting exception for out of bounds index
-
-Log
-Parse: 000+-push(1)
-000+0-push(2)
-000++-push(3)
-+-0+OutN-0--Jump(1)
--00+-Lbl(3)
-+-0+OutN+-0+OutN--END!
-
-
-Labels: 1
-   3: 9
-Runtime Error: Cannot invoke "java.lang.Integer.intValue()" because the return value of "java.util.Map.get(Object)" is null
-Debug: [0], 1[2], 2[4], 3[6][7]
-Output: Nothing
-Exception not expected: java.lang.NullPointerException: Cannot invoke "java.lang.Integer.intValue()" because the return value of "java.util.Map.get(Object)" is null
-
-Log
-Parse: 000+-push(1)
-+-+0GetC000+0-push(2)
-+-+0GetC000++-push(3)
-+-+0GetC000+00-push(4)
-+-+0GetC000+0+-push(5)
-+-+0GetC000+0+-push(5)
-+++HeapG000+00-push(4)
-+++HeapG000++-push(3)
-+++HeapG000+0-push(2)
-+++HeapG000+-push(1)
-+++HeapG+-00OutC+-00OutC+-00OutC+-00OutC+-00OutC--END!
-
-
-Labels: 0
-Debug: [0], 1[2], 1(72)[3], 2[5], 2(101)[6], 3[8], 3(108)[9], 4[11], 4(108)[12], 5[14], 5(-1)[15], 5[17], 5(-1)[18], 4[20], 4(108)[21], 3[23], 3(108)[24], 2[26], 2(101)[27], 1[29], 1(72)[30][31][32][33][34][35]!!!
-Output: Hell￿
-Expecting exception for end of input
-
-Log
-Parse: 000+0-push(2)
--0+0-Call(2)
-000++-push(3)
--0+0-Call(2)
-000+-push(1)
--0+0-Call(2)
---END!
-
-
-Labels: 0
-Runtime Error: Cannot invoke "java.lang.Integer.intValue()" because the return value of "java.util.Map.get(Object)" is null
-Debug: [0], 2[2]
-Output: Nothing
-Exception not expected: java.lang.NullPointerException: Cannot invoke "java.lang.Integer.intValue()" because the return value of "java.util.Map.get(Object)" is null
-
-Log
-Parse: 000+-push(1)
--0+0-Call(2)
-000+0-push(2)
--0+0-Call(2)
-000++-push(3)
--0+0-Call(2)
---END!
-
-
-Labels: 0
-Runtime Error: Cannot invoke "java.lang.Integer.intValue()" because the return value of "java.util.Map.get(Object)" is null
-Debug: [0], 1[2]
-Output: Nothing
-Exception not expected: java.lang.NullPointerException: Cannot invoke "java.lang.Integer.intValue()" because the return value of "java.util.Map.get(Object)" is null
-
-Log
-Parse: 000+-push(1)
-+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], 1[2][3]!!!
-Output: 1
-expected:<1> but was:<null>
-
-Log
-Parse: 000+-push(1)
-000+-push(1)
-000+0-push(2)
-++0HeapS+++HeapG+-0+OutN--END!
-
-
-Labels: 0
-Debug: [0], 1[2], 1[4], 2[6], 1(2)[7], 1(2)[8][9]!!!
-Output: 2
-expected:<2> but was:<null>
-
-Log
-Parse:
-Labels: 0
-Runtime Error: Code ended before execution completed
-Debug:
-Output: Nothing
-Expected exception for unclean termination caught: java.lang.RuntimeException: Code ended before execution completed
-unclean termination expected:<1> but was:<null>
-
-og
-Parse: --END!
-
-
-Labels: 0
-Debug: [0]!!!
-Output:
-expected:<1> but was:<null>
-
-Log
-Parse error: 000+-push(1)
-+-++GetN000+-push(1)
-+++HeapG+-0+OutN000+0-push(2)
-+-++GetN000+0-push(2)
-+++HeapG+-0+OutN000++-push(3)
-+-++GetN000++-push(3)
-++-
-Labels: 0
-Expected exception for unknown instruction caught: java.lang.RuntimeException: Not a valid heap access command
-unknown instruction expected:<[12]> but was:<[]>
-
-Log
-Parse: 000+-push(1)
-000+0-push(2)
-000++-push(3)
-+-0+OutN-0--Jump(1)
-+-0+OutN+-0+OutN-00-Lbl(1)
--00-Lbl(1)
---END!
-
-
-Labels: 1
-   1: 11
-Debug: [0], 1[2], 2[4], 3[6][7], 11[11]!!!
-Output: 3
-Expecting exception for multiple label
-
-og
-Parse: --END!
-
-
-Labels: 0
-Debug: [0]!!!
-Output:
-Expecting exception for invalid commands
-
-og
-Parse: 00++-push(-1)
---END!
-
-
-Labels: 0
-Debug: [0], -1[2]!!!
-Output:
-Expecting exception for invalid commands
-
-
-
-     */
+    */
 
 }
