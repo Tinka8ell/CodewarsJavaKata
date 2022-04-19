@@ -48,6 +48,12 @@ file to explain it.
 
 # Yet to complete:
 
+## Morse Code Decoder
+This is a three part kata, so will get harder ...
+* [Simple Morse Code Decoder](https://www.codewars.com/kata/decode-the-morse-code)
+* [Morse code decoder for wired electrical telegraph](https://www.codewars.com/kata/decode-the-morse-code-advanced)
+* [Decode the Morse code, for real](https://www.codewars.com/kata/decode-the-morse-code-for-real)
+
 ## Closest pair of points in linearithmic time
 For my next trick: [Closest pair of points in linearithmic time](https://www.codewars.com/kata/5376b901424ed4f8c20002b7).  
 This will get me into the dark realm of computer science and big O notation.  See the Wikipedia entry for the
