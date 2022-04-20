@@ -24,18 +24,24 @@ public class MorseCodeDecoder {
                 .mapToInt(String::length)
                 .boxed()
                 .collect(Collectors.toList());
-        System.out.println("Ones: " + ones);
-        System.out.println("Zeros: " + zeros);
+        // System.out.println("Ones: " + ones);
+        // System.out.println("Zeros: " + zeros);
         if (ones.get(0) == 0){
             ones.remove(0);
+            if (ones.size() == 0)
+                return "";
+            if (zeros.size() > 0)
+                zeros.remove(0);
+            // System.out.println("Ones: " + ones);
+            // System.out.println("Zeros: " + zeros);
+        }
+        if (zeros.size() > 0 && zeros.get(0) == 0){
             zeros.remove(0);
             System.out.println("Ones: " + ones);
             System.out.println("Zeros: " + zeros);
         }
-        if (zeros.get(0) == 0){
-            zeros.remove(0);
-            System.out.println("Ones: " + ones);
-            System.out.println("Zeros: " + zeros);
+        while (zeros.size() >= ones.size()){
+            zeros.remove(zeros.size() - 1);
         }
         Map<Integer, Integer> frequency = new HashMap<>();
         for (int each : ones) {
@@ -48,49 +54,42 @@ public class MorseCodeDecoder {
         List<Integer> frequencies = frequency.keySet().stream().sorted().collect(Collectors.toList());
         int shortest = frequencies.get(0);
         int longest = frequencies.get(frequencies.size() - 1);
-        /*
-         * shortest = x - a
-         * longest = 3 * (x + a)
-         * diff = 2 * x + 4 * a
-         */
-        /*
-        int a = 0;
-        int x = shortest + a;
-        while (3 * (x + a) < longest){
-            a++;
-            x = shortest + a;
-        }
-        a--;
-         */
-        /*
-         * longest = (x + a)
-         * shortest = (x - a) / 3
-         * 3 * diff = 3 * x + 3 * a - x + a
-         *          = 2 * x + 4 * a
-         */
-        /*
-        int a = 0;
-        int x = longest - a;
-        while ((x - a) / 3.0 > shortest){
-            a++;
-            x = longest - a;
-        }
-        // a--;
-         */
+        int max = frequency.values().stream().reduce(0, (m, i) -> i > m ? i : m);
         double sum = 0;
         double dCount = 0;
-        for (int index: frequencies) {
+        int index= frequencies.get(0);
+        while (true){
             Integer number = frequency.get(index);
             if (number == null)
                 break;
+            if (number < max / 2)
+                break;
             dCount += number;
             sum += number * index;
+            index++;
         }
         double x = sum / dCount;
-        double a = 1.0;
+        double a = x; //1.0;
+        double two = 2.5 * x;
+        double five = 5 * x;
         StringBuilder message = new StringBuilder(
-                shortest + " " + longest + " : " + (x - a) + " " + (3 * (x + a)) + " : " + x + " " + a);
-                // shortest + " " + longest + " : " + ((x - a) / 3.0) + " " + (x + a) + " : " + x + " " + a);
+                "x: " + x + ", a: " + a);
+        message.append("\nOne: ")
+                .append(x - a)
+                .append(" -> ")
+                .append(x + a);
+        message.append("\nTwo: ")
+                .append(two);
+        message.append("\nThree: ")
+                .append(3 * (x - a))
+                .append(" -> ")
+                .append(3 * (x + a));
+        message.append("\nFive: ")
+                .append(five);
+        message.append("\nSeven: ")
+                .append(7 * (x - a))
+                .append(" -> ")
+                .append(7 * (x + a));
         for (int each = shortest; each <= longest; each++) {
             int count = frequency.getOrDefault(each, 0);
             message.append("\n")
@@ -98,20 +97,24 @@ public class MorseCodeDecoder {
                     .append(" -> ")
                     .append(count);
         }
-
-        message.append("\n   ");
-        //message = new StringBuilder();
+        System.out.println("Ones: " + ones);
+        System.out.println("Zeros: " + zeros);
+        System.out.println(message);
+        message = new StringBuilder();
         for (int i = 0; i < ones.size(); i++) {
             int count = ones.get(i);
-            if (count < x + a + 1)
+            // if (count < x + a + 1)
+            if (count < two)
                 message.append(".");
             else
                 message.append("-");
             // message.append(count);
-            if (i < zeros.size()){
+            if (i < zeros.size()) {
                 count = zeros.get(i);
-                if (count > x + a){
-                    if (count < 3 * (x + a) + 1)
+                // if (count > x + a) {
+                if (count > two) {
+                    // if (count < 3 * (x + a) + 1)
+                    if (count < five)
                         message.append(" ");
                     else
                         message.append("   ");
@@ -122,7 +125,8 @@ public class MorseCodeDecoder {
 
             }
         }
-        message.append("\n   .... . -.--   .--- ..- -.. .");
+        //message.append("\n   .... . -.--   .--- ..- -.. .");
+        //message.append("\n.... . -.--   .--- ..- -.. .");
         /*
         message.append("\n");
         for (int i = 0; i < ones.size(); i++) {
@@ -147,6 +151,9 @@ public class MorseCodeDecoder {
             }
         }
          */
+        if (message.length() < 2)
+            System.out.println("Short message: '" + message + "'");
+        message.append("X");
         return message.toString();
     }
 
@@ -188,6 +195,8 @@ public class MorseCodeDecoder {
     }
 
     public static String decodeMorse(String morseCode) {
+        if (morseCode.isEmpty())
+            return "";
         return Arrays.stream(morseCode.trim().split(" {3}"))
                 .map(MorseCodeDecoder::decodeWord)
                 .collect(Collectors.joining(" "));
@@ -197,108 +206,4 @@ public class MorseCodeDecoder {
         return Arrays.stream(word.split(" ")).map(MorseCode::get).collect(Collectors.joining());
     }
 
-    public static void main(String[] argv){
-        String test = "";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "0";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "000";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "1";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "111";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "01110";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "0011100";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "000111000";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "101";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "010";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "0101";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "0010";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "1010";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "0100";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "000111";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "0111111000000";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-        test = "0000010000110001110000";
-        System.out.println("Test: '" + test +
-                "' - " +
-                Arrays.toString(Arrays.stream(test.split("0+")).mapToInt(String::length).toArray()) +
-                " - " +
-                Arrays.toString(Arrays.stream(test.split("1+")).mapToInt(String::length).toArray()));
-    }
 }
