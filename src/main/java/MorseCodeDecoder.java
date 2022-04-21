@@ -14,6 +14,7 @@ public class MorseCodeDecoder {
      * @return String of '.'s and '-'s
      */
     public static String decodeBitsAdvanced(String bits) {
+        System.out.println(bits);
         bits = bits.replaceAll("^0+", "");
         bits = bits.replaceAll("0+$", "");
         if (bits.isEmpty())
@@ -31,82 +32,42 @@ public class MorseCodeDecoder {
         if (zeros.size() > 0 && zeros.get(0) == 0){
             zeros.remove(0);
         }
-        while (zeros.size() >= ones.size()){
-            zeros.remove(zeros.size() - 1);
-        }
-        // System.out.println("Ones: " + ones + Arrays.toString(bits.split("0+")));
-        // System.out.println("Zeros: " + zeros + Arrays.toString(bits.split("1+")));
-        Map<Integer, Integer> frequency = new HashMap<>();
-        for (int each : ones) {
-            frequency.put(each, frequency.getOrDefault(each, 0) + 1);
-        }
-        for (int each : zeros) {
-            frequency.put(each, frequency.getOrDefault(each, 0) + 1);
-        }
-        //noinspection SimplifyStreamApiCallChains
-        List<Integer> frequencies = frequency.keySet().stream().sorted().collect(Collectors.toList());
-        int shortest = frequencies.get(0);
-        int longest = frequencies.get(frequencies.size() - 1);
+        int longestOne = ones.stream().reduce(0, (m, i) -> m = (i > m) ? i : m);
+        int longest = zeros.stream().reduce(longestOne, (m, i) -> m = (i > m) ? i : m);
+        int shortest = zeros.stream().reduce(longest, (m, i) -> m = (i < m) ? i : m);
+        shortest = ones.stream().reduce(shortest, (m, i) -> m = (i < m) ? i : m);
         double x = longest  / 8.0; // 7 + 1 - smallest that can be 7 * x
         double two = 2 * x; // divide 1 and 3 times at 2
-        double three = 3 * x;
-        double five = 5 * x; // divide 3 and 7 times at 5
-        double seven = 7 * x;
         StringBuilder message = new StringBuilder();
+        message.append("\nShort: ")
+                .append(shortest);
         message.append("\nOne: ")
                 .append(x);
         message.append(", Two: ")
                 .append(two);
-        message.append(", Three: ")
-                .append(three);
-        message.append(", Five: ")
-                .append(five);
-        message.append(", Seven: ")
-                .append(seven);
-        if (Math.ceil(x) == Math.ceil(two)){
+        two = Math.ceil(two);
+        double five = Math.max(Math.ceil(x * 5), longestOne + 1);
+        if (Math.ceil(x) == two){
             message.append("\nFail! no seven's");
             x = longest  / 4.0; // 3 + 1 - smallest that can be 3 * x
             two = 2 * x; // divide 1 and 3 times at 2
-            three = 3 * x;
-            five = 5 * x; // divide 3 and 7 times at 5
-            seven = 7 * x;
+            message.append("\nShort: ")
+                    .append(shortest);
             message.append("\nOne: ")
                     .append(x);
             message.append(", Two: ")
                     .append(two);
-            message.append(", Three: ")
-                    .append(three);
-            message.append(", Five: ")
-                    .append(five);
-            message.append(", Seven: ")
-                    .append(seven);
-            if (Math.ceil(x) == Math.ceil(two)){
+            two = Math.ceil(two);
+            five = longest + 1;
+            if (Math.ceil(x) == two){
                 message.append("\nFail! no three's");
-                x = longest  / 2.0; // 1 + 1 - smallest that can be x
-                two = 2 * x; // divide 1 and 3 times at 2
-                three = 3 * x;
-                five = 5 * x; // divide 3 and 7 times at 5
-                seven = 7 * x;
+                x = longest;
+                two = longest + 1;
                 message.append("\nOne: ")
                         .append(x);
                 message.append(", Two: ")
                         .append(two);
-                message.append(", Three: ")
-                        .append(three);
-                message.append(", Five: ")
-                        .append(five);
-                message.append(", Seven: ")
-                        .append(seven);
             }
-        }
-        two = Math.ceil(two);
-        five = Math.ceil(five);
-        for (int each = shortest; each <= longest; each++) {
-            int count = frequency.getOrDefault(each, 0);
-            message.append("\n")
-                    .append(each)
-                    .append(" -> ")
-                    .append(count);
         }
         System.out.println(message);
         message = new StringBuilder();
@@ -171,6 +132,7 @@ public class MorseCodeDecoder {
     }
 
     public static String decodeMorse(String morseCode) {
+        System.out.println(morseCode);
         if (morseCode.isEmpty())
             return "";
         return Arrays.stream(morseCode.trim().split(" {3}"))
