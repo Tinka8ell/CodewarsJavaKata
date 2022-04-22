@@ -32,66 +32,72 @@ public class MorseCodeDecoder {
         if (zeros.size() > 0 && zeros.get(0) == 0){
             zeros.remove(0);
         }
+        System.out.println(" Ones: " + ones);
+        System.out.println("Zeros: " + zeros);
         int longestOne = ones.stream().reduce(0, (m, i) -> m = (i > m) ? i : m);
         int longest = zeros.stream().reduce(longestOne, (m, i) -> m = (i > m) ? i : m);
         int shortest = zeros.stream().reduce(longest, (m, i) -> m = (i < m) ? i : m);
         shortest = ones.stream().reduce(shortest, (m, i) -> m = (i < m) ? i : m);
-        double x = longest  / 8.0; // 7 + 1 - smallest that can be 7 * x
-        double two = 2 * x; // divide 1 and 3 times at 2
-        StringBuilder message = new StringBuilder();
-        message.append("\nShort: ")
-                .append(shortest);
-        message.append("\nOne: ")
-                .append(x);
-        message.append(", Two: ")
-                .append(two);
-        two = Math.ceil(two);
-        double five = Math.max(Math.ceil(x * 5), longestOne + 1);
-        if (Math.ceil(x) == two){
-            message.append("\nFail! no seven's");
-            x = longest  / 4.0; // 3 + 1 - smallest that can be 3 * x
-            two = 2 * x; // divide 1 and 3 times at 2
-            message.append("\nShort: ")
-                    .append(shortest);
-            message.append("\nOne: ")
-                    .append(x);
-            message.append(", Two: ")
-                    .append(two);
-            two = Math.ceil(two);
-            five = longest + 1;
-            if (Math.ceil(x) == two){
-                message.append("\nFail! no three's");
-                x = longest;
-                two = longest + 1;
-                message.append("\nOne: ")
-                        .append(x);
-                message.append(", Two: ")
-                        .append(two);
-            }
-        }
-        System.out.println(message);
-        message = new StringBuilder();
-        for (int i = 0; i < ones.size(); i++) {
-            int count = ones.get(i);
-            if (count > two)
-                message.append("-");
-            else
-                message.append(".");
-            if (i < zeros.size()) {
-                count = zeros.get(i);
-                if (count > two) {
-                    if (count < five)
-                        message.append(" ");
-                    else
-                        message.append("   ");
-                }
+        decodeMorse(".... . -.--   .--- ..- -.. .");
+        String morseCode = "";
+        for (int i = shortest * 6; i < 18 * shortest; i++){
+            float one = (float) (i / 6.0);
+            morseCode = generateMorseCode(ones, zeros, one);
+            decodeMorse(morseCode);
+            if (checkMorse(morseCode)) {
+                System.out.println("Check is true ");
+                break;
             }
         }
         //message.append("\n   .... . -.--   .--- ..- -.. .");
         //message.append("\n.... . -.--   .--- ..- -.. .");
-        if (message.length() < 2)
-            System.out.println("Short message: '" + message + "'");
-        return message.toString();
+        return morseCode;
+    }
+
+    private static String generateMorseCode(List<Integer> ones, List<Integer> zeros, float one) {
+        int three = (int) Math.floor(3.0 * one);
+        int seven = (int) Math.floor(7 * one);
+        //seven = 99;
+        System.out.println("Trying generation with one: " + one + ", three: " + three + ", seven: " + seven);
+        StringBuilder message = new StringBuilder();
+        StringBuilder debug = new StringBuilder();
+        for (int i = 0; i < ones.size(); i++) {
+            int count = ones.get(i);
+            debug.append("[").append(count).append("]");
+            if (count >= three)
+                message.append("-");
+            else
+                message.append(".");
+            debug.append(message.substring(message.length()-1));
+            if (i < zeros.size()) {
+                count = zeros.get(i);
+                debug.append("(").append(count).append(")");
+                if (count >= three) {
+                    if (count >= seven)
+                        message.append("   ");
+                    else
+                        message.append(" ");
+                    debug.append(message.substring(message.length()-1));
+                }
+            }
+        }
+        String morseCode = message.toString();
+        //System.out.println("Debug: " + debug);
+        System.out.println("Generated: " + message);
+        return morseCode;
+    }
+
+    public static boolean checkMorse(String morseCode) {
+        return !Arrays.stream(morseCode.trim().split(" {3}"))
+                .map(MorseCodeDecoder::checkWord)
+                .reduce(false, (a, b) -> a || b);
+    }
+
+    private static boolean checkWord(String word) {
+        return Arrays.stream(word.split(" "))
+                .map(MorseCode::get)
+                .map(Objects::isNull)
+                .reduce(false, (a, b) -> a || b);
     }
 
     public static String decodeBits(String bits) {
@@ -132,12 +138,13 @@ public class MorseCodeDecoder {
     }
 
     public static String decodeMorse(String morseCode) {
-        System.out.println(morseCode);
-        if (morseCode.isEmpty())
-            return "";
-        return Arrays.stream(morseCode.trim().split(" {3}"))
+        String text = "";
+        if (!morseCode.isEmpty())
+            text = Arrays.stream(morseCode.trim().split(" {3}"))
                 .map(MorseCodeDecoder::decodeWord)
                 .collect(Collectors.joining(" "));
+        System.out.println("decodeMorse: " + morseCode + " -> " + text);
+        return text;
     }
 
     private static String decodeWord(String word) {
