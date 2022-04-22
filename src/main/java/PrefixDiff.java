@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
  *  In addition to returning the derivative your solution must also do some simplifications of the result
  *  but only what is specified below.
  * * The returned expression should not have necessary 0 or 1 factors.
- *   For example it should not return (* 1 (+ x 1)) but simply the term (+ x 1)
+ *   For example, it should not return (* 1 (+ x 1)) but simply the term (+ x 1)
  *   similarly it should not return (* 0 (+ x 1)) instead it should return just 0
  * * Results with two constant values such as for example (+ 2 2)
  *   should be evaluated and returned as a single value 4
@@ -96,7 +96,23 @@ class PrefixDiff {
         SUM, // + / - two values
         PRODUCT, // * two values
         QUOTIENT, // / two values
-        CHAIN // function of function
+        CHAIN, // function of function
+        UNKNOWN // not yet identified
+    }
+
+    /**
+     * Operations are one of + - * / ^
+     * and take two arguments
+     */
+    public static String operations = "+-*/^";
+
+    /**
+     * Function names are one of:
+     *    cos, sin, tan, exp or ln
+     * and take one argument
+     */
+    public enum FunctionName{
+        cos, sin, tan, exp, ln, x, n, o
     }
 
     /**
@@ -107,28 +123,132 @@ class PrefixDiff {
         private static final Function ZERO = new Function("0");
         private static final Function ONE = new Function("1");
 
-        private String name;
-        private boolean isSimple = true;
-        private Function left;
-        private Function right;
-        private Double constant;
-        private OpType opType;
+        private String name = "0";
+        private Double constant = 0.0;
+        private int intValue = 0;
+        private FunctionName functionName = FunctionName.x;
+        private OpType opType = OpType.UNKNOWN;
+        private Function left = null;
+        private Function right = null;
+        private boolean isConstant = false;
+        private boolean isVariable = false;
 
         /**
-         * Create an end node of the function tree
-         * This is a constant or a variable name (probably 'x')
+         * Return the "power" of this function
+         * Constant power = 0 base = ZERO
+         * Variable power = 1 base = ONE
          *
-         * @param action a String name or a number as a String
+         * @return an integer power level
          */
-        public Function(String action){
-            name = action; // constant or variable
+        public int getPower(){
+            int power;
+            switch (functionName){
+                case n:
+                    power = 0;
+                    break;
+                case o:
+                    if (name.equals("+") || name.equals("-"))
+                        power = left.getPower();
+                    else if (name.equals("*") || name.equals("/"))
+                        power = right.getPower();
+                    else
+                        power = right.intValue;
+                    break;
+                default:
+                    power = 1;
+            }
+            return power;
+        }
+
+        /**
+         * Return the base of this function
+         * What it's power is based upon (function or variable or constant)
+         * Constant order = 0 base = ZERO
+         * Variable order = 1 base = ONE
+         *
+         * @return the base of this expression
+         */
+        public Function getBase(){
+            Function order;
+            switch (functionName){
+                case n:
+                    order = ZERO;
+                    break;
+                case x:
+                    order = ONE;
+                    break;
+                case o:
+                    if (name.equals("+") || name.equals("-"))
+                        order = left.getBase();
+                    else if (name.equals("*") || name.equals("/"))
+                        order = right.getBase();
+                    else
+                        order = left;
+                    break;
+                default:
+                    order = this;
+            }
+            return order;
+        }
+
+        /**
+         * Create an empty function
+         */
+        public Function() {
+        }
+
+        /**
+         * Create a constant or variable function
+         *
+         * @param name a String name or a number as a String
+         */
+        public Function(String name){
+            setName(name);
+        }
+
+        public void setName(String name){
+            this.name = name; // constant or variable
             try {
-                constant = Double.parseDouble(action);
+                // try for an int first
+                intValue = (int) Long.parseLong(name);
+                isConstant = true;
                 opType = OpType.CONSTANT;
+                functionName = FunctionName.n;
             }
             catch (NumberFormatException e){
-                // it wasn't a number
-                opType = OpType.NAME;
+                try {
+                    // then for a double
+                    constant = Double.parseDouble(name);
+                    isConstant = true;
+                    opType = OpType.CONSTANT;
+                    functionName = FunctionName.n;
+                }
+                catch (NumberFormatException nfe){
+                    // it wasn't a number
+                    if (name.length() == 1) {
+                        // is it a binary operator
+                        functionName = FunctionName.n;
+                        //noinspection EnhancedSwitchMigration
+                        switch (name){
+                            case "+":
+                            case "-":
+                                opType = OpType.SUM;
+                                break;
+                            case "*":
+                            case "/":
+                                opType = OpType.PRODUCT;
+                                break;
+                            case "^":
+                                opType = OpType.CHAIN;
+                                break;
+                            default: // variable?
+                                isVariable = true;
+                                opType = OpType.NAME;
+                        }
+                    } else {
+                        functionName = FunctionName.valueOf(name);
+                    }
+                }
             }
         }
 
@@ -139,10 +259,11 @@ class PrefixDiff {
          * @param leftPart a function for the one argument
          */
         public Function(String action, Function leftPart){
-            name = action; // constant or variable
+            setName(action);
             left = leftPart;
             opType = OpType.CHAIN;
-            isSimple = false;
+            isVariable = false;
+            functionName = FunctionName.valueOf(name);
         }
 
         /**
@@ -154,30 +275,32 @@ class PrefixDiff {
          * @param rightPart the argument that is applied in the operation
          */
         public Function(String action, Function leftPart, Function rightPart){
-            name = action;
+            setName(action);
             left = leftPart;
             right = rightPart;
-            switch (action){
-                case "+":
-                case "-":
-                    opType = OpType.SUM;
-                    break;
-                case "*":
-                case "/":
-                    opType = OpType.PRODUCT;
-                    break;
-                default: // "^"
-                    opType = OpType.CHAIN;
-            }
-            isSimple = false;
         }
 
+        //
+        // Parsing routines
+        //
+
         private static Character getNext(List<Character> rest) {
-            return rest.size() > 0 ? rest.remove(0) : ')';
+            return rest.size() > 0 ? rest.remove(0) : 0;
         }
 
         private static Character getNextNoneBlank(List<Character> rest) {
             Character test = getNext(rest);
+            while (test == ' ')
+                test = getNext(rest);// skip blanks
+            return test;
+        }
+
+        private static Character getLast(List<Character> rest) {
+            return rest.size() > 0 ? rest.remove(rest.size() - 1) : 0;
+        }
+
+        private static Character getLastNoneBlank(List<Character> rest) {
+            Character test = getLast(rest);
             while (test == ' ')
                 test = getNext(rest);// skip blanks
             return test;
@@ -188,44 +311,243 @@ class PrefixDiff {
             while (test == ' ')
                 test = getNext(rest);// skip blanks
             StringBuilder word = new StringBuilder();
-            while (test != ' ' && test != ')'){
+            while (test != ' ' && test != 0){
                 word.append(test);
                 test = getNext(rest);
             }
             // as we aren't using it, put it back!
-            rest.add(0, test);
+            if (test != 0)
+                rest.add(0, test);
             return word.toString();
         }
 
-        public static Function parse(List<Character> rest) {
+        /**
+         * Populate the Function from the next part of the rest.
+         * Return the unused part of rest.
+         * @param rest characters to process
+         * @return remaining characters to process
+         */
+        public static List<Character>  parse(Function toPopulate, List<Character> rest) {
             Character test = getNextNoneBlank(rest);
-            if (test == '(') {
+            if (test == '(') { // start with a bra then:
+                test = getLastNoneBlank(rest); // must be matching closing ket
+                if (test != ')')
+                    throw new Error("Expression does not have matching brackets");
                 // starting an expression
-                String action = getNextWord(rest);
-                if (action.length() == 1) {
-                    if ("+-*/^".indexOf(action) != -1) {
-                        // has two arguments and closing ket
-                        Function leftPart = Function.parse(rest);
-                        Function rightPart = Function.parse(rest);
-                        while (test != ')') // lazy as starts as '(' ...
-                            test = getNext(rest);// skip to end ket
-                        return new Function(action, leftPart, rightPart);
-                    } else {
-                        // we have wrapped variable or constant so unwrap it
-                        return parse(rest);
-                    }
-                } else {
-                    // otherwise, it is a function with one argument
-                    Function leftPart = Function.parse(rest);
-                    return new Function(action, leftPart);
-                }
+                String name = getNextWord(rest);
+                toPopulate.setName(name);
+                if (toPopulate.functionName == FunctionName.o) {
+                    // has two arguments
+                    test = getNextNoneBlank(rest);
+                    if (test != ',')
+                        throw new Error("Missing comma between operator and first argument");
+                    toPopulate.left = new Function();
+                    rest = parse(toPopulate.left, rest);
+                    test = getNextNoneBlank(rest);
+                    if (test != ',')
+                        throw new Error("Missing comma between first and second arguments");
+                    toPopulate.right = new Function();
+                    rest = parse(toPopulate.right, rest);
+                } else if (toPopulate.functionName == FunctionName.x) {
+                    // has one argument
+                    test = getNextNoneBlank(rest);
+                    if (test != ',')
+                        throw new Error("Missing comma between operator and argument");
+                    toPopulate.left = new Function();
+                    rest = parse(toPopulate.left, rest);
+                } // otherwise, it is a constant or variable
             } else {
-                // got a var or const
-                rest.add(0, test); // put test back so we can read it as a word...
-                String action = getNextWord(rest);
-                return new Function(action);
+                // can only be a variable or constant
+                String name = getNextWord(rest);
+                toPopulate.setName(name);
+                if (toPopulate.functionName != FunctionName.x && toPopulate.functionName != FunctionName.n)
+                    throw new Error("Function or operator without brackets");
+            }
+            return rest;
+        }
+
+        /**
+         * Basic simplification.
+         *
+         * isConstant or isVar => as simple as it can be
+         * if left then make left simple then
+         * if function and left is constant => do the sum!
+         * if right then make right simple then
+         * if operator and both left and right are constant => do the sum!
+         *
+         * if '-' change right = Function("*", right, -1) and name = '+'
+         *
+         * if '+' then
+         *    if left.getPower() > right.getPower() then
+         *       left and right get swapped
+         *    else if == then combine left and right into same "power"
+         *
+         * if '÷' and right.isConstant then
+         *    name = '*'
+         *    right = 1 ÷ right.value
+         *
+         * if '*' then
+         *    if right.isConstant and not left.isConstant
+         *       left and right get swapped
+         *    if left.base == right.base then
+         *       combine powers: left = left.power + right.power and right = left.base
+         *
+         */
+        private void makeMoreSimple(){
+            if (isVariable || isConstant)
+                return; // as simple as it gets
+            if (left != null)
+                left.makeMoreSimple();
+            if (opType == OpType.CHAIN) {
+                //noinspection ConstantConditions
+                if (left.isConstant) {
+                    calculate();
+                    return;
+                }
+            }
+            if (right != null)
+                right.makeMoreSimple();
+            if (functionName == FunctionName.o){
+                calculate();
+            }
+            // try and make commutative!
+            if (name.equals("-")){
+                setName("+");
+                right = new Function("*", MINUS_ONE, right); // - X => + -1 * X!
+            }
+            if (name.equals("+")){
+                //noinspection ConstantConditions
+                if (left.getBase() == right.getBase()){
+                    if(left.getPower() > right.getPower()){ // swap the order
+                        Function swap = left;
+                        left = right;
+                        right = swap;
+                    } else if (left.getPower() == right.getPower()){
+                        addLeftAndRight();
+                    }
+                }
+            }
+            if (name.equals("+") &&
+                    left.isConstant &&
+                    left.constant == 0){
+                // it adds nothing ...
+                setName(right.name);
+                left = right.left;
+                right = right.right;
+                return;
+            }
+            if (name.equals("*")) {
+                //noinspection ConstantConditions
+                if (right.isConstant && !left.isConstant){
+                    Function swap = left;
+                    left = right;
+                    right = swap;
+                }
+                //noinspection ConstantConditions
+                if (left.getBase() == right.getBase()) {
+                    int sum = left.getPower() + right.getPower();
+                    left = new Function(Integer.toString(sum));
+                    right = right.getBase();
+                    setName("^");
+                }
+            }
+            if (name.equals("*") && left.isConstant) {
+                if (left.constant == 0) {
+                    // it is nothing ...
+                    setName("0");
+                    left = null;
+                    right = null;
+                    return;
+                }
+                if (left.constant == 1) {
+                    // it changes nothing ...
+                    setName(right.name);
+                    left = right.left;
+                    right = right.right;
+                    return;
+                }
+            }
+            //noinspection ConstantConditions
+            if (name.equals("^") && left.isConstant) {
+                if (left.constant == 0) {
+                    // it is one!
+                    setName("1");
+                    left = null;
+                    right = null;
+                    return;
+                }
+                if (left.constant == 1) {
+                    // it changes nothing ...
+                    setName(left.name);
+                    right = left.right;
+                    left = left.left;
+                    //noinspection UnnecessaryReturnStatement
+                    return;
+                }
             }
         }
+
+        /**
+         * Add the left and right together as they have the same base...
+         * '+' , ('+' , x , y) , ('+', p, q)
+         * '+' , ('*' , x , y) , ('*', p, q)
+         * etc.,
+         */
+        private void addLeftAndRight() {
+        }
+
+        /**
+         * Calculate the function or operator applied to a constant or constants
+         * Should convert this into a new constant!
+         */
+        private void calculate() {
+            Double sum = null;
+            switch (functionName){
+                case ln:
+                    sum = Math.log(left.constant);
+                    break;
+                case exp:
+                    sum = Math.exp(left.constant);
+                    break;
+                case sin:
+                    sum = Math.sin(left.constant);
+                    break;
+                case cos:
+                    sum = Math.cos(left.constant);
+                    break;
+                case tan:
+                    sum = Math.tan(left.constant);
+                    break;
+                case o:
+                    //noinspection EnhancedSwitchMigration
+                    switch (name){
+                        case "+":
+                            sum = left.constant + right.constant;
+                            break;
+                        case "-":
+                            sum = left.constant - right.constant;
+                            break;
+                        case "*":
+                            sum = left.constant * right.constant;
+                            break;
+                        case "/":
+                            sum = left.constant / right.constant;
+                            break;
+                        case "^":
+                            sum = Math.pow(left.constant, right.constant);
+                            break;
+                    }
+                    break;
+                default:
+                    // should not come here!
+            }
+            if (sum != null){
+                setName(sum.toString());
+                left = null;
+                right = null;
+            }
+        }
+
 
         @Override
         public String toString() {
@@ -233,125 +555,15 @@ class PrefixDiff {
                 if (left == null){
                     return name;
                 } else {
-                    return "( " + name + " " + left.toString() + " )";
+                    return "( " + name + " " + left + " )";
                 }
             } else {
                 if (left == null){
-                    return "( " + name + " " + right.toString() + " )";
+                    return "( " + name + " " + right + " )";
                 } else {
-                    return "( " + name + " " + left.toString() + " " + right.toString() + " )";
+                    return "( " + name + " " + left + " " + right + " )";
                 }
             }
-        }
-
-        private String getNumber(Double number) {
-            if (number == number.longValue())
-                return Long.toString(number.longValue());
-            return number.toString();
-        }
-
-        /**
-         * Simplify the expressions.
-         * A simplified expression is basically an ordered sum of multiples:
-         *
-         * sum = <multiple> | '(' '+' <multiple> <sum> ')' and is of order of the multiple
-         * multiple = <constant> | '(' * <constant> <function> ')' and is of order of the function
-         * constant is nonzero number (Long, Double) and is of order 0
-         * function = <name> | '(' '^' <name> <sum> ')' and is of order sum
-         * name = <named function> | <product>
-         * product = '(' * <named function> <named function> ')'
-         * named function = <variable name> | '(' <'cos' | 'sin' | 'tan' | 'exp' | 'ln'> <variable sum> ')'
-         * variable name = 'x' - basically the unitary function on 'x'
-         * variable sum = a sum containing a variable name
-         *
-         * multiples are "ordered" by their name and order of the power ('^') they are raised to
-         * 
-         * zero constants remove themselves and any multiple they are part of
-         * powers of 1 can be folded to the name they represent
-         * product of two equal <named function> is '(' '^' <named function> '2' ')'  
-         * '-' is not commutative so: 
-         *   '(' '-' <arg1> <arg2> ')' 
-         * becomes: 
-         *   '(' '+' <arg1> <minus multiple> ')' were 
-         *   minus multiple = '(' '*' '-1' <arg2> ')'
-         * '/' is not commutative so: 
-         *   '(' '/' <arg1> <arg2> ')' 
-         * becomes: 
-         *   '(' '*' <arg1> <negative power> ')' were 
-         *   negative power = '(' '^' <arg2> '-1' ')'
-         *
-         * @return simplified function
-         */
-        public Function simplify(){
-            // short circuit if we can
-            if (isSimple)
-                return this;
-
-            // not so simple so at least normalise
-            if (left == null)
-                left = ZERO;
-            else if (!left.isSimple)
-                left = left.simplify();
-            if (right == null)
-                right = ZERO;
-            else if (!right.isSimple)
-                right = right.simplify();
-
-            // now go deeper
-            Function simple = this;
-            switch (opType){
-                /* these are already excluded
-                case NAME:
-                case CONSTANT:
-                    // as simple as it gets
-                    break;
-                 */
-                case SUM:
-                    if (right.opType == OpType.CONSTANT){
-                        if (left.opType == OpType.CONSTANT){
-                            // if sum of two numbers, then do the arithmetic
-                            double result = right.constant;
-                            if (name.equals("-"))
-                                result = - result;
-                            result += left.constant;
-                            simple = new Function(getNumber(result));
-                        } else if (name.equals("+")){
-                            // else put constant first
-                            Function swap = right;
-                            right = left;
-                            left = swap;
-                        }
-                    }
-                    if (simple == this)
-                        if (left.opType == OpType.CONSTANT && left.constant == 0)
-                            simple = right; // adding 0 does nothing!
-                    break;
-                case PRODUCT:
-                    // similar to sum
-                    if (right.opType == OpType.CONSTANT){
-                        if (left.opType == OpType.CONSTANT){
-                            // if product of two numbers, then do the arithmetic
-                            double result = left.constant * right.constant;
-                            simple = new Function(getNumber(result));
-                        } else {
-                            // else put constant first
-                            Function swap = right;
-                            right = left;
-                            left = swap;
-                        }
-                        if (simple == this)
-                            if (left.opType == OpType.CONSTANT && left.constant == 0)
-                                simple = ZERO; // 0 time anything is nothing!
-                    }
-                    if (simple == this)
-                        if (left.opType == OpType.CONSTANT)
-                            if (left.constant == 0)
-                                simple = ZERO; // nothing times anything is nothing!
-                            else if (left.constant == 1)
-                                simple = right; // one times something is just something!
-                    break;
-            }
-            return simple;
         }
 
         /**
@@ -392,6 +604,7 @@ class PrefixDiff {
          */
         public Function differentiate (){
             Function diff = null;
+            //noinspection EnhancedSwitchMigration
             switch (opType){
                 case CONSTANT: // a number
                     diff = ZERO; // end of the line
@@ -418,6 +631,7 @@ class PrefixDiff {
                     // f -> name (with right), g -> left
                     //   f(g(x))' -> new name = "*", new left = f'(g(x)), new right = g'(x)
                     Function newLeft2 = null; //f'(g(x))
+                    //noinspection EnhancedSwitchMigration
                     switch (name){ // derive left
                         case "^": // to a power: x^a   -> a.x^(a-1)
                             // x = left, a = right
@@ -430,16 +644,12 @@ class PrefixDiff {
                     diff = new Function("*", newLeft2, left.differentiate() );
                     break;
             }
-            return diff.simplify();
+            //noinspection ConstantConditions
+            diff.makeMoreSimple();
+            return diff;
         }
     }
 
-    private static  Pattern starter = Pattern.compile("^[ (]+(.*)$"); // start expressions characters
-    private static  Pattern ender = Pattern.compile("^[ )]+(.*)$"); // end expression characters
-    private static  Pattern argument = Pattern.compile("^([^ ()]+)(.*)$"); // argument characters
-    private static  Pattern expressionPattern = Pattern.compile("^ *\\( *([-+/*^a-z0-9]+)(.*) *\\) *$");
-    private static  Pattern constantPattern = Pattern.compile("^ *([a-z0-9]+)(.*) *$");
-    private static  Pattern variablePattern = Pattern.compile("^ *([a-z]+)(.*) *$");
 
     /**
      * Starting from f(x) generate f'(x).
@@ -457,9 +667,14 @@ class PrefixDiff {
      */
     public String diff(String expr) {
         // parse it
-        Function function = Function.parse(expr.chars().mapToObj(e -> (char)e).collect(Collectors.toList()));
+        Function function = new Function();
+        List<Character> rest = Function.parse(function, expr.chars().mapToObj(e -> (char)e).collect(Collectors.toList()));
+        if (Function.getNextNoneBlank(rest) != 0) // a none blank remains?
+            throw new Error("left over input after parsing the expression");
+        function.makeMoreSimple();
         // differentiate
         function = function.differentiate();
+        function.makeMoreSimple();
         // return to string
         return function.toString();
     }
