@@ -26,6 +26,6 @@ public class UnOp implements Ast{
 
     @Override
     public String toString() {
-        return "{'op':'" + command + "','n':" + value + "}";
+        return "{'op':'" + command + "','value':" + value + "}";
     }
 }
