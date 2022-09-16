@@ -1,7 +1,8 @@
-import static org.junit.Assert.assertArrayEquals;
 import org.junit.Test;
-import org.junit.runners.JUnit4;
+
 import java.util.Arrays;
+
+import static org.junit.Assert.assertArrayEquals;
 
 public class MexicanWaveTest {
 
