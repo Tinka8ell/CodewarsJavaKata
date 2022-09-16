@@ -1,8 +1,9 @@
 package com.tinkabell.t3pcompiler;
 
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+//import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
@@ -18,7 +19,7 @@ public class CompilerTest {
      * {'op':'imm','value':0}
      */
     @Test
-    public  void testMinimal(){
+    public void testMinimal(){
         String program = "[ ] 0";
         Compiler compiler = new Compiler();
         String expected = "{'op':'imm','value':0}";
@@ -40,7 +41,7 @@ public class CompilerTest {
     @ParameterizedTest
     //@CsvSource({"0, 0", "1, 1", "2, 2"})
     @ValueSource(strings = {"0", "1", "99", "" + Integer.MAX_VALUE /* , "-1", "" + Integer.MIN_VALUE} are invalid inputs*/ })
-    public  void testMinimalInt(String n){
+    public void testMinimalInt(String n){
         String program = "[ ] " + n;
         int output = Integer.parseInt(n);
         Compiler compiler = new Compiler();
@@ -67,6 +68,7 @@ public class CompilerTest {
      * which looks like:
      * {'op':'/','a':{'op':'+','a':{'op':'arg','value':0},'b':{'op':'arg','value':1}},'b':{'op':'imm','value':2}}
      */
+    @Ignore
     @Test
     public  void testSimplePass1(){
         String program = "[ x y ] ( x + y ) / 2 ";
@@ -80,6 +82,7 @@ public class CompilerTest {
         assertEquals("Pass 1", t1, p1);
     }
 
+    @Ignore
     @Test
     public void testSimpleProg() {
         String program = "[ x y z ] ( 2*3*x + 5*y - 3*z ) / (1 + 3 + 2*2)";

@@ -45,8 +45,13 @@ public class Compiler {
      */
     public List<String> pass3(Ast ast) {
         List<String> code = new ArrayList<>();
-        code.add("IM 0"); // hard code return 0 for now
-        return code;
+        String op = ast.op();
+        if (ast instanceof UnOp unOp) {
+            int number = unOp.n();
+            code.add("IM " + number); // hard code return 0 for now
+            return code;
+        }
+        return null;
     }
 
     private static Deque<String> tokenize(String program) {
