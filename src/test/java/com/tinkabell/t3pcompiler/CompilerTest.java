@@ -1,6 +1,10 @@
 package com.tinkabell.t3pcompiler;
 
 import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+
 import java.util.List;
 import static org.junit.Assert.assertEquals;
 
@@ -31,6 +35,29 @@ public class CompilerTest {
 
         List<String> p3 = compiler.pass3(p2);
         assertEquals("program() == 0", 0, Simulator.simulate(p3));
+    }
+
+    @ParameterizedTest
+    //@CsvSource({"0, 0", "1, 1", "2, 2"})
+    @ValueSource(strings = {"0", "1", "99", "" + Integer.MAX_VALUE /* , "-1", "" + Integer.MIN_VALUE} are invalid inputs*/ })
+    public  void testMinimalInt(String n){
+        String program = "[ ] " + n;
+        int output = Integer.parseInt(n);
+        Compiler compiler = new Compiler();
+        String expected = "{'op':'imm','value':" + n + "}";
+
+        Ast t1 = new UnOp("imm", output);
+        assertEquals("Pass 1 as JSON", expected, t1.toString());
+
+        Ast p1 = compiler.pass1(program);
+        assertEquals("Pass 1", t1, p1);
+
+        // This is a no-op as there is nothing to simplify
+        Ast p2 = compiler.pass2(p1);
+        assertEquals("Pass 2", t1, p2);
+
+        List<String> p3 = compiler.pass3(p2);
+        assertEquals("program() == " + n, output, Simulator.simulate(p3));
     }
 
     /**
