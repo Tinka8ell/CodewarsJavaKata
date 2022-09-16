@@ -1,5 +1,7 @@
 package com.tinkabell.t3pcompiler;
 
+import java.util.Objects;
+
 public class BinOp implements Ast {
 
     private final String command;
@@ -28,6 +30,19 @@ public class BinOp implements Ast {
     @Override
     public String op() {
         return command;
+    }
+
+    @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        return toString().equals(o.toString());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(command, left, right);
     }
 
     /*

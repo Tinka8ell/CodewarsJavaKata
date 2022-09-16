@@ -1,5 +1,6 @@
 package com.tinkabell.t3pcompiler;
 
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
@@ -16,21 +17,36 @@ public class Compiler {
      */
     public Ast pass1(String program) {
         Deque<String> tokens = tokenize(program);
-        return null;
+        //System.out.println(tokens);
+        if (!tokens.removeFirst().equals("["))
+            throw new IllegalArgumentException("Program must start with '['");
+        //System.out.println(tokens);
+        while (!tokens.removeFirst().equals("]"))
+            throw new IllegalArgumentException("Don't expect parameters in program");
+        //System.out.println(tokens);
+        String number = tokens.removeFirst(); // expect a number
+        //System.out.println(tokens);
+        //System.out.println(tokens.size());
+        if (!tokens.isEmpty() && !tokens.removeFirst().equals("$"))
+            throw new IllegalArgumentException("Program can't have more than one value, and next is not $");
+
+        return new UnOp("imm", Integer.parseInt(number));
     }
 
     /**
      * Returns an AST with constant expressions reduced
      */
     public Ast pass2(Ast ast) {
-        return null;
+        return ast;
     }
 
     /**
      * Returns assembly instructions
      */
     public List<String> pass3(Ast ast) {
-        return null;
+        List<String> code = new ArrayList<>();
+        code.add("IM 0"); // hard code return 0 for now
+        return code;
     }
 
     private static Deque<String> tokenize(String program) {
