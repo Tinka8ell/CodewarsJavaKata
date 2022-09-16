@@ -48,6 +48,10 @@ file to explain it.
 
 # Yet to complete:
 
+### Tiny Three-Pass Compiler
+Another imagination catcher:  [Tiny Three-Pass Compiler](https://www.codewars.com/kata/5265b0885fda8eac5900093b)!
+I am putting the info in a [readme](doc/TinyThree-PassCompiler.md).
+
 ## Morse Code Decoder
 This is a three part kata, so will get harder ...
 * [Morse Code Decoder](https://www.codewars.com/kata/decode-the-morse-code) as simple as they come.
