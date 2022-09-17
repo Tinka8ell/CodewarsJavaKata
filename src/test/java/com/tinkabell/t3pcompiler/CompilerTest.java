@@ -4,6 +4,7 @@ import org.junit.Test;
 import org.junit.Ignore;
 import org.junit.jupiter.params.ParameterizedTest;
 //import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
@@ -12,34 +13,14 @@ import static org.junit.Assert.assertEquals;
 public class CompilerTest {
 
     /**
-     * [ ] 0
+     * [ ] n
      * would look like:
-     * new UnOp("imm", 0)
+     * new UnOp("imm", n)
      * which looks like:
-     * {'op':'imm','value':0}
+     * {'op':'imm','value':n}
+     * where n is a non-negative integer
      */
-    @Test
-    public void testMinimal(){
-        String program = "[ ] 0";
-        Compiler compiler = new Compiler();
-        String expected = "{'op':'imm','value':0}";
-
-        Ast t1 = new UnOp("imm", 0);
-        assertEquals("Pass 1 as JSON", expected, t1.toString());
-
-        Ast p1 = compiler.pass1(program);
-        assertEquals("Pass 1", t1, p1);
-
-        // This is a no-op as there is nothing to simplify
-        Ast p2 = compiler.pass2(p1);
-        assertEquals("Pass 2", t1, p2);
-
-        List<String> p3 = compiler.pass3(p2);
-        assertEquals("program() == 0", 0, Simulator.simulate(p3));
-    }
-
     @ParameterizedTest
-    //@CsvSource({"0, 0", "1, 1", "2, 2"})
     @ValueSource(strings = {"0", "1", "99", "" + Integer.MAX_VALUE /* , "-1", "" + Integer.MIN_VALUE} are invalid inputs*/ })
     public void testMinimalInt(String n){
         String program = "[ ] " + n;
@@ -59,6 +40,42 @@ public class CompilerTest {
 
         List<String> p3 = compiler.pass3(p2);
         assertEquals("program() == " + n, output, Simulator.simulate(p3));
+    }
+
+    /**
+     * [ a ] a
+     * would look like:
+     * new UnOp("arg", 0)
+     * which looks like:
+     * {'op':'arg','value':0}
+     * where a is a valid parameter name
+     * For any parameter n (is an integer) it will generate that number when run
+     */
+    @ParameterizedTest
+    @CsvSource({
+            "a, 1",
+            "b, -2",
+            "aVeryLongName, 99",
+            "maxInt, " + Integer.MAX_VALUE,
+            "minInt, " + Integer.MIN_VALUE,
+            })
+    public void testMinimalVar(String var, int n){
+        String program = "[ " + var + "] " + n;
+        Compiler compiler = new Compiler();
+        String expected = "{'op':'arg','value':0}";
+
+        Ast t1 = new UnOp("arg", 0);
+        assertEquals("Pass 1 as JSON", expected, t1.toString());
+
+        Ast p1 = compiler.pass1(program);
+        assertEquals("Pass 1", t1, p1);
+
+        // This is a no-op as there is nothing to simplify
+        Ast p2 = compiler.pass2(p1);
+        assertEquals("Pass 2", t1, p2);
+
+        List<String> p3 = compiler.pass3(p2);
+        assertEquals("program() == " + n, n, Simulator.simulate(p3));
     }
 
     /**
