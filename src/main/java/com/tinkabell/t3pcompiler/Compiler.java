@@ -16,15 +16,13 @@ public class Compiler {
         Deque<String> tokens = tokenize(program);
         if (!tokens.removeFirst().equals("["))
             throw new IllegalArgumentException("Program must start with '['");
-        Map<String, Integer> parameters = new HashMap<>();
-        int parameterIndex = 0;
-        String parameter = tokens.removeFirst();
-        while (!parameter.equals("]")) { // Should really also check for end of tokens!
-            parameters.put(parameter, parameterIndex);
-            parameterIndex ++;
-            parameter = tokens.removeFirst();
-        }
-        String token = tokens.removeFirst(); // expect a number
+        Map<String, Integer> parameters = getParameters(tokens);
+        Ast ast = getAst(tokens, parameters);
+        return ast;
+    }
+
+    private static Ast getAst(Deque<String> tokens, Map<String, Integer> parameters) {
+        String token = tokens.removeFirst(); // expect a number or parameter
         int number;
         String command = "imm";
         try {
@@ -33,7 +31,20 @@ public class Compiler {
             command = "arg";
             number = parameters.get(token); // assume no invalid tokens!
         }
-        return new UnOp(command, number);
+        Ast ast = new UnOp(command, number);
+        return ast;
+    }
+
+    private static Map<String, Integer> getParameters(Deque<String> tokens) {
+        Map<String, Integer> parameters = new HashMap<>();
+        int parameterIndex = 0;
+        String parameter = tokens.removeFirst();
+        while (!parameter.equals("]")) { // Should really also check for end of tokens!
+            parameters.put(parameter, parameterIndex);
+            parameterIndex ++;
+            parameter = tokens.removeFirst();
+        }
+        return parameters;
     }
 
     /**
