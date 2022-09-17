@@ -11,7 +11,9 @@ class Simulator {
         Deque<Integer> stack = new LinkedList<>();
         for (String ins : asm) {
             String code = ins.replaceAll("\\s+[0-9]+", "");
-            final int trimmedR0 = Integer.parseInt(ins.substring(2).trim());
+            String trim = ins.substring(2).trim();
+            final int trimmedR0 = trim.length() > 0 ? Integer.parseInt(trim): 0;
+            // System.out.println("Processing: " + ins + " into " + code + " and number: '" + trim + "' => " + trimmedR0);
             switch (code) {
                 case "IM" -> r0 = trimmedR0;
                 case "AR" -> r0 = argv[trimmedR0];

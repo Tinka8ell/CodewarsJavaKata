@@ -24,8 +24,19 @@ public class Compiler {
             // not the expected end of the expression
             throw new IllegalArgumentException("Program has extra tokens beyond the expression: " + peek);
         }
-
         return ast;
+    }
+
+    private static Map<String, Integer> getParameters(Deque<String> tokens) {
+        Map<String, Integer> parameters = new HashMap<>();
+        int parameterIndex = 0;
+        String parameter = tokens.removeFirst();
+        while (!parameter.equals("]")) { // Should really also check for end of tokens!
+            parameters.put(parameter, parameterIndex);
+            parameterIndex ++;
+            parameter = tokens.removeFirst();
+        }
+        return parameters;
     }
 
     private static Ast getAst(Deque<String> tokens, Map<String, Integer> parameters) {
@@ -59,22 +70,11 @@ public class Compiler {
         return ast;
     }
 
-    private static Map<String, Integer> getParameters(Deque<String> tokens) {
-        Map<String, Integer> parameters = new HashMap<>();
-        int parameterIndex = 0;
-        String parameter = tokens.removeFirst();
-        while (!parameter.equals("]")) { // Should really also check for end of tokens!
-            parameters.put(parameter, parameterIndex);
-            parameterIndex ++;
-            parameter = tokens.removeFirst();
-        }
-        return parameters;
-    }
-
     /**
      * Returns an AST with constant expressions reduced
      */
     public Ast pass2(Ast ast) {
+        System.out.println("Pass2 not yet implemented");
         return ast;
     }
 
@@ -83,6 +83,11 @@ public class Compiler {
      */
     public List<String> pass3(Ast ast) {
         List<String> code = new ArrayList<>();
+        extractCodeFromAst(code, ast);
+        return code;
+    }
+
+    private static void extractCodeFromAst(List<String> code, Ast ast) {
         String command =  "";
         String op = ast.op();
         if (ast instanceof UnOp unOp) {
@@ -91,9 +96,32 @@ public class Compiler {
             if (!op.equals("imm"))
                 command = "AR";
             command += " " + number;
+        } else if (ast instanceof BinOp binOp) {
+            // process left
+            extractCodeFromAst(code, binOp.a());
+            // push left to stack
+            code.add("PU");
+            // process right
+            extractCodeFromAst(code, binOp.b());
+            // swap right to R1
+            code.add("SW");
+            // pop left off stack
+            code.add("PO");
+            command = "AD"; // add R1 to R0 and put the result in R0
+            if (!op.equals("+")) {
+                command = "SU"; // subtract R1 from R0 and put the result in R0
+                if (!op.equals("-")) {
+                    command = "MU"; // multiply R0 by R1 and put the result in R0
+                    if (!op.equals("*")) {
+                        command = "DI"; // divide R0 by R1 and put the result in R0
+                        if (!op.equals("/")) {
+                            throw new IllegalArgumentException("Program contains unrecognised binary operator: " + op);
+                        }
+                    }
+                }
+            }
         }
         code.add(command);
-        return code;
     }
 
     private static Deque<String> tokenize(String program) {

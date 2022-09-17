@@ -151,6 +151,9 @@ public class CompilerTest {
     @ParameterizedTest
     @CsvSource({
             "x, 1, y, 3, 2",
+            "aBigLeft, 10, aBiggerRight, 30, 20",
+            "a, 1, b, 2, 1",
+            "c, 10, d, 20, 15",
     })
     public  void testSimpleCompile(String left, int leftValue, String right, int rightValue, int result){
         String program = "[ " + left + " " + right + " ] ( " + left + " + " + right + " ) / 2 " ;
