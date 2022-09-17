@@ -149,7 +149,6 @@ public class CompilerTest {
      * which looks like:
      * {'op':'/','a':{'op':'+','a':{'op':'arg','value':0},'b':{'op':'arg','value':1}},'b':{'op':'imm','value':2}}
      */
-    @Ignore
     @Test
     public  void testSimplePass1(){
         String program = "[ x y ] ( x + y ) / 2 ";
