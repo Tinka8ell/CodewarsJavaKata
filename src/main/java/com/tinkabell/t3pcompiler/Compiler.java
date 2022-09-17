@@ -17,7 +17,15 @@ public class Compiler {
         if (!tokens.removeFirst().equals("["))
             throw new IllegalArgumentException("Program must start with '['");
         Map<String, Integer> parameters = getParameters(tokens);
-        return getAst(tokens, parameters);
+        Ast ast = getAst(tokens, parameters);
+        String peek = tokens.peekFirst();
+        assert peek != null; // as we expect at least the end of token character
+        if (!peek.equals("$")){
+            // not the expected end of the expression
+            throw new IllegalArgumentException("Program has extra tokens beyond the expression: " + peek);
+        }
+
+        return ast;
     }
 
     private static Ast getAst(Deque<String> tokens, Map<String, Integer> parameters) {
@@ -39,6 +47,14 @@ public class Compiler {
                 number = parameters.get(token); // assume no invalid tokens!
             }
             ast = new UnOp(command, number);
+        }
+        // now check for binary operators or end of expression (ket or $)
+        String peek = tokens.peekFirst();
+        assert peek != null; // as we expect at least the end of token character
+        if (!peek.equals(")") && !peek.equals("$")){
+            // part of a binary operation
+            String binary = tokens.removeFirst(); // expect a '+', '-', '*' or '/'
+            ast = new BinOp(binary, ast, getAst(tokens, parameters));
         }
         return ast;
     }
