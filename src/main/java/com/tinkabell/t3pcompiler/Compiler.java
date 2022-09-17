@@ -1,9 +1,6 @@
 package com.tinkabell.t3pcompiler;
 
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -17,20 +14,26 @@ public class Compiler {
      */
     public Ast pass1(String program) {
         Deque<String> tokens = tokenize(program);
-        //System.out.println(tokens);
         if (!tokens.removeFirst().equals("["))
             throw new IllegalArgumentException("Program must start with '['");
-        //System.out.println(tokens);
-        while (!tokens.removeFirst().equals("]"))
-            throw new IllegalArgumentException("Don't expect parameters in program");
-        //System.out.println(tokens);
-        String number = tokens.removeFirst(); // expect a number
-        //System.out.println(tokens);
-        //System.out.println(tokens.size());
-        if (!tokens.isEmpty() && !tokens.removeFirst().equals("$"))
-            throw new IllegalArgumentException("Program can't have more than one value, and next is not $");
-
-        return new UnOp("imm", Integer.parseInt(number));
+        Map<String, Integer> parameters = new HashMap<>();
+        int parameterIndex = 0;
+        String parameter = tokens.removeFirst();
+        while (!parameter.equals("]")) { // Should really also check for end of tokens!
+            parameters.put(parameter, parameterIndex);
+            parameterIndex ++;
+            parameter = tokens.removeFirst();
+        }
+        String token = tokens.removeFirst(); // expect a number
+        int number;
+        String command = "imm";
+        try {
+            number = Integer.parseInt(token);
+        } catch (NumberFormatException e) {
+            command = "arg";
+            number = parameters.get(token); // assume no invalid tokens!
+        }
+        return new UnOp(command, number);
     }
 
     /**
@@ -45,13 +48,17 @@ public class Compiler {
      */
     public List<String> pass3(Ast ast) {
         List<String> code = new ArrayList<>();
+        String command =  "";
         String op = ast.op();
         if (ast instanceof UnOp unOp) {
             int number = unOp.n();
-            code.add("IM " + number); // hard code return 0 for now
-            return code;
+            command = "IM";
+            if (!op.equals("imm"))
+                command = "AR";
+            command += " " + number;
         }
-        return null;
+        code.add(command);
+        return code;
     }
 
     private static Deque<String> tokenize(String program) {
@@ -64,4 +71,5 @@ public class Compiler {
         tokens.add("$"); // end-of-stream
         return tokens;
     }
+
 }

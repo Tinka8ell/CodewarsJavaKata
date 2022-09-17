@@ -60,22 +60,24 @@ public class CompilerTest {
             "minInt, " + Integer.MIN_VALUE,
             })
     public void testMinimalVar(String var, int n){
-        String program = "[ " + var + "] " + n;
+        String program = "[ " + var + " ] " + var;
         Compiler compiler = new Compiler();
         String expected = "{'op':'arg','value':0}";
+        int[] parameters = { n };
 
         Ast t1 = new UnOp("arg", 0);
         assertEquals("Pass 1 as JSON", expected, t1.toString());
-
+        System.out.println("Program is: " + program);
         Ast p1 = compiler.pass1(program);
-        assertEquals("Pass 1", t1, p1);
-
+        assertEquals("Pass 1 for " + program, t1, p1);
+        System.out.println("Pass1 is: " + p1);
         // This is a no-op as there is nothing to simplify
         Ast p2 = compiler.pass2(p1);
-        assertEquals("Pass 2", t1, p2);
-
+        assertEquals("Pass 2 for " + p1, t1, p2);
+        System.out.println("Pass2 is: " + p2);
         List<String> p3 = compiler.pass3(p2);
-        assertEquals("program() == " + n, n, Simulator.simulate(p3));
+        System.out.println("Pass3 is: " + p3);
+        assertEquals("program() == " + n, n, Simulator.simulate(p3, parameters));
     }
 
     /**
