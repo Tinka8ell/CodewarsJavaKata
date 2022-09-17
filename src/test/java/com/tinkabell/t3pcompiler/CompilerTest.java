@@ -3,12 +3,12 @@ package com.tinkabell.t3pcompiler;
 import org.junit.Test;
 import org.junit.Ignore;
 import org.junit.jupiter.params.ParameterizedTest;
-//import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 public class CompilerTest {
 
@@ -67,16 +67,15 @@ public class CompilerTest {
 
         Ast t1 = new UnOp("arg", 0);
         assertEquals("Pass 1 as JSON", expected, t1.toString());
-        System.out.println("Program is: " + program);
+
         Ast p1 = compiler.pass1(program);
         assertEquals("Pass 1 for " + program, t1, p1);
-        System.out.println("Pass1 is: " + p1);
+
         // This is a no-op as there is nothing to simplify
         Ast p2 = compiler.pass2(p1);
-        assertEquals("Pass 2 for " + p1, t1, p2);
-        System.out.println("Pass2 is: " + p2);
+
         List<String> p3 = compiler.pass3(p2);
-        System.out.println("Pass3 is: " + p3);
+
         assertEquals("program() == " + n, n, Simulator.simulate(p3, parameters));
     }
 
@@ -126,20 +125,57 @@ public class CompilerTest {
         if (n == 0)
             t1 = new UnOp("imm", output);
         assertEquals("Pass 1 as JSON", expected, t1.toString());
-        System.out.println("Program is: " + program);
+
         Ast p1 = compiler.pass1(program);
         assertEquals("Pass 1 for " + program, t1, p1);
-        System.out.println("Pass1 is: " + p1);
+
         // This is a no-op as there is nothing to simplify
         Ast p2 = compiler.pass2(p1);
         assertEquals("Pass 2 for " + p1, t1, p2);
-        System.out.println("Pass2 is: " + p2);
+
         List<String> p3 = compiler.pass3(p2);
-        System.out.println("Pass3 is: " + p3);
+
         if (n == 0)
             assertEquals("program() == " + n, output, Simulator.simulate(p3));
         else
             assertEquals("program() == " + n, n, Simulator.simulate(p3, parameters));
+    }
+
+    /**
+     * [ x y ] ( x + y ) / 2
+     * would look like:
+     * new BinOp("/", new BinOp("+", new UnOp("arg", 0), new UnOp("arg", 1)), new UnOp("imm", 2))
+     * which looks like:
+     * {'op':'/','a':{'op':'+','a':{'op':'arg','value':0},'b':{'op':'arg','value':1}},'b':{'op':'imm','value':2}}
+     */
+    @ParameterizedTest
+    @CsvSource({
+            "x, 1, y, 3, 2",
+    })
+    public  void testSimpleCompile(String left, int leftValue, String right, int rightValue, int result){
+        String program = "[ " + left + " " + right + " ] ( " + left + " + " + right + " ) / 2 " ;
+        Compiler compiler = new Compiler();
+        String expected = "{'op':'/','a':{'op':'+','a':{'op':'arg','value':0},'b':{'op':'arg','value':1}},'b':{'op':'imm','value':2}}";
+        int[] parameters = { leftValue, rightValue };
+
+        Ast t1 = new BinOp("/", new BinOp("+", new UnOp("arg", 0), new UnOp("arg", 1)), new UnOp("imm", 2));
+        assertEquals("Pass 1 as JSON", expected, t1.toString());
+
+        Ast p1 = compiler.pass1(program);
+        assertEquals("Pass 1 for " + program, t1, p1);
+
+        // This is a no-op as there is nothing to simplify
+        Ast p2 = compiler.pass2(p1);
+        assertEquals("Pass 2 for " + p1, t1, p2);
+
+        List<String> p3 = compiler.pass3(p2);
+        System.out.println("Pass3:");
+        for (String line: p3) {
+            System.out.println(">>> " + line);
+        }
+        assertNotEquals(0, p3.size());
+        assertNotEquals(0, p3.get(0).trim().length());
+        assertEquals("program() == " + leftValue + ", " + rightValue, result, Simulator.simulate(p3, parameters));
     }
 
     /**
