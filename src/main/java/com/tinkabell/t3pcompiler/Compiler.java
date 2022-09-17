@@ -17,21 +17,29 @@ public class Compiler {
         if (!tokens.removeFirst().equals("["))
             throw new IllegalArgumentException("Program must start with '['");
         Map<String, Integer> parameters = getParameters(tokens);
-        Ast ast = getAst(tokens, parameters);
-        return ast;
+        return getAst(tokens, parameters);
     }
 
     private static Ast getAst(Deque<String> tokens, Map<String, Integer> parameters) {
-        String token = tokens.removeFirst(); // expect a number or parameter
-        int number;
-        String command = "imm";
-        try {
-            number = Integer.parseInt(token);
-        } catch (NumberFormatException e) {
-            command = "arg";
-            number = parameters.get(token); // assume no invalid tokens!
+        String token = tokens.removeFirst(); // expect a number or parameter or bra
+        Ast ast;
+        if (token.equals("(")){ // start of bra & ket
+            // ignore bra and process next part
+            ast = getAst(tokens, parameters);
+            token = tokens.removeFirst(); // expect a ket
+            if (!token.equals(")"))
+                throw new IllegalArgumentException("Program unbalanced bra - no matching ket");
+        } else {
+            int number;
+            String command = "imm";
+            try {
+                number = Integer.parseInt(token);
+            } catch (NumberFormatException e) {
+                command = "arg";
+                number = parameters.get(token); // assume no invalid tokens!
+            }
+            ast = new UnOp(command, number);
         }
-        Ast ast = new UnOp(command, number);
         return ast;
     }
 
