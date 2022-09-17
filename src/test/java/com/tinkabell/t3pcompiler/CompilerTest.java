@@ -81,6 +81,68 @@ public class CompilerTest {
     }
 
     /**
+     * [ ] ( n )
+     * would look like:
+     * new UnOp("imm", n)
+     * which looks like:
+     * {'op':'imm','value':n}
+     * where n is a non-negative integer
+     * or:
+     * [ a ] ( a )
+     * would look like:
+     * new UnOp("arg", 0)
+     * which looks like:
+     * {'op':'arg','value':0}
+     * where a is a valid parameter name
+     * For any parameter number (is an integer) it will generate that number when run
+     */
+    @ParameterizedTest
+    @CsvSource({
+            "a, 1",
+            "b, -2",
+            "aVeryLongName, 99",
+            "maxInt, " + Integer.MAX_VALUE,
+            "minInt, " + Integer.MIN_VALUE,
+            "0 , 0",
+            "1 , 0",
+            "99 , 0",
+            Integer.MAX_VALUE + " , 0",
+    })
+    public void testMinimalBraKet(String var, int n){
+        // if n == 0, assume no parameter and var is the expression
+        int output = n;
+        if (n == 0)
+            output = Integer.parseInt(var);
+        String program = "[ " + var + " ] ( " + var + " ) ";
+        if (n == 0)
+            program = "[ ] ( " + var + " ) ";
+        Compiler compiler = new Compiler();
+        String expected = "{'op':'arg','value':0}";
+        if (n == 0)
+            expected = "{'op':'imm','value':" + var + "}";
+        int[] parameters = { n };
+
+        Ast t1 = new UnOp("arg", 0);
+        if (n == 0)
+            t1 = new UnOp("imm", output);
+        assertEquals("Pass 1 as JSON", expected, t1.toString());
+        System.out.println("Program is: " + program);
+        Ast p1 = compiler.pass1(program);
+        assertEquals("Pass 1 for " + program, t1, p1);
+        System.out.println("Pass1 is: " + p1);
+        // This is a no-op as there is nothing to simplify
+        Ast p2 = compiler.pass2(p1);
+        assertEquals("Pass 2 for " + p1, t1, p2);
+        System.out.println("Pass2 is: " + p2);
+        List<String> p3 = compiler.pass3(p2);
+        System.out.println("Pass3 is: " + p3);
+        if (n == 0)
+            assertEquals("program() == " + n, output, Simulator.simulate(p3));
+        else
+            assertEquals("program() == " + n, n, Simulator.simulate(p3, parameters));
+    }
+
+    /**
      * [ x y ] ( x + y ) / 2
      * would look like:
      * new BinOp("/", new BinOp("+", new UnOp("arg", 0), new UnOp("arg", 1)), new UnOp("imm", 2))
