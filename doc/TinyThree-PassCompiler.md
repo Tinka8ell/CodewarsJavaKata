@@ -120,3 +120,26 @@ class Simulator {
     }
 }
 ```
+## The bit I was missing
+
+I needed to process the "expression" as BODMAS.  
+Found an algorithm for [Shunting yard algorithm on wikipedia](https://en.wikipedia.org/wiki/Shunting_yard_algorithm).
+I made a simplified version as we only have B-DMAS and all operators are all left-associative ...
+
+* while there are tokens to be read:
+  * read a token
+    * if the token is:
+      * a number:
+      * put it into the output queue
+    * an operator o1:
+      * while (there is an operator o2 other than the left parenthesis at the top of the operator stack, and (o2 has greater or equal precedence than o1 as o1 is left-associative)):
+        * pop o2 from the operator stack into the output queue
+      * push o1 onto the operator stack
+      * a left parenthesis - bra (i.e. "("):
+        * push it onto the operator stack
+      * a right parenthesis (i.e. ")"):
+        * while (the operator at the top of the operator stack is not a left parenthesis):
+          * pop the operator from the operator stack into the output queue
+        * pop the left parenthesis from the operator stack and discard it
+* while there are tokens on the operator stack:
+  * pop the operator from the operator stack onto the output queue

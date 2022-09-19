@@ -17,14 +17,7 @@ public class Compiler {
         if (!tokens.removeFirst().equals("["))
             throw new IllegalArgumentException("Program must start with '['");
         Map<String, Integer> parameters = getParameters(tokens);
-        Ast ast = getAst(tokens, parameters);
-        String peek = tokens.peekFirst();
-        assert peek != null; // as we expect at least the end of token character
-        if (!peek.equals("$")){
-            // not the expected end of the expression
-            throw new IllegalArgumentException("Program has extra tokens beyond the expression: " + peek);
-        }
-        return ast;
+        return getAst(tokens, parameters);
     }
 
     private static Map<String, Integer> getParameters(Deque<String> tokens) {
@@ -39,9 +32,99 @@ public class Compiler {
         return parameters;
     }
 
+    /**
+     * Generate an int to represent the token:
+     * Token is one of:
+     *    operator: "-", "+", "/", "*" - in order of precedence
+     *    bra-ket: "(", ")"
+     *    number: decimal digits only
+     *    parameter: alpha character only
+     * These are mutually exclusive characters,
+     * so we can generate a number token from the index in "()-+/*".
+     * If not matched then return -1 as not operator.
+     */
+    private static int getTokenType(String token) {
+        return "()-+/*".indexOf(token);
+    }
+
+    /**
+     * Thus must process the expression following BODMAS.
+     * Using the Shunting Yard Algorithm
+     * * while there are tokens to be read:
+     *   * read a token
+     *     * if the token is:
+     *       * a number:
+     *       * put it into the output queue
+     *     * an operator o1:
+     *       * while (there is an operator o2 other than the left parenthesis at the top of the operator stack, and (o2 has greater or equal precedence than o1 as o1 is left-associative)):
+     *         * pop o2 from the operator stack into the output queue
+     *       * push o1 onto the operator stack
+     *       * a left parenthesis - bra (i.e. "("):
+     *         * push it onto the operator stack
+     *       * a right parenthesis (i.e. ")"):
+     *         * while (the operator at the top of the operator stack is not a left parenthesis):
+     *           * pop the operator from the operator stack into the output queue
+     *         * pop the left parenthesis from the operator stack and discard it
+     * * while there are tokens on the operator stack:
+     *   * pop the operator from the operator stack onto the output queue
+     *
+     * @param tokens - the expression as tokens
+     * @param parameters - list of the parameter names defined
+     *
+     * @return and AST holding the full tree
+     */
     private static Ast getAst(Deque<String> tokens, Map<String, Integer> parameters) {
-        String token = tokens.removeFirst(); // expect a number or parameter or bra
-        Ast ast;
+        // String token = tokens.removeFirst(); // expect a number or parameter or bra
+        Ast ast = null; // to keep compiler happy!
+        // in the algorithm this is a queue,
+        // but we're going to condense the output down to 1 Ast
+        Stack<Ast> outputQueue = new Stack<>();
+        Stack<String> operatorStack = new Stack<>();
+        int tokenType;
+        int number;
+        String astOperator;
+        String token = tokens.pollFirst();
+        while(token != null && !token.equals("$")) {
+            tokenType = getTokenType(token);
+            if (tokenType < 0) {
+                astOperator = "imm";
+                try {
+                    number = Integer.parseInt(token);
+                } catch (NumberFormatException e) {
+                    astOperator = "arg";
+                    number = parameters.get(token); // assume no invalid tokens!
+                }
+                ast = new UnOp(astOperator, number);
+            }
+            switch (tokenType) {
+                case -1: // number or parameter
+                    outputQueue.push(ast);
+                    break;
+                case 2:
+                case 3:
+                case 4:
+                case 5: // an operator
+                    while (!operatorStack.empty() && getTokenType(operatorStack.peek()) >= tokenType) {
+                        pushAstOnOutputQueue(outputQueue, operatorStack);
+                    }
+                    operatorStack.push(token);
+                    break;
+                case 0: // bra
+                    operatorStack.push(token);
+                    break;
+                case 1: // ket
+                    while (!operatorStack.empty() && !operatorStack.peek().equals("(")) {
+                        pushAstOnOutputQueue(outputQueue, operatorStack);
+                    }
+                    operatorStack.pop(); // pop the left parenthesis and discard it
+                    break;
+            }
+            token = tokens.pollFirst();
+        }
+        while (!operatorStack.empty()) {
+            pushAstOnOutputQueue(outputQueue, operatorStack);
+        }
+        /*
         if (token.equals("(")){ // start of bra & ket
             // ignore bra and process next part
             ast = getAst(tokens, parameters);
@@ -67,7 +150,16 @@ public class Compiler {
             String binary = tokens.removeFirst(); // expect a '+', '-', '*' or '/'
             ast = new BinOp(binary, ast, getAst(tokens, parameters));
         }
-        return ast;
+        */
+        return outputQueue.pop(); // should be only thing left there
+    }
+
+    private static void pushAstOnOutputQueue(Stack<Ast> outputQueue, Stack<String> operatorStack) {
+        String astOperator = operatorStack.pop();
+        Ast ast = outputQueue.pop(); // right hand parameter
+        ast = new BinOp(astOperator, outputQueue.pop(), ast);
+        outputQueue.push(ast);
+        // System.out.println("pushed onto output: " + ast);
     }
 
     /**
@@ -136,3 +228,4 @@ public class Compiler {
     }
 
 }
+
