@@ -5,14 +5,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Compiler {
-    public static List<String> compile(String program) {
+    public List<String> compile(String program) {
         return pass3(pass2(pass1(program)));
     }
 
     /**
      * Returns an un-optimized AST
      */
-    public static Ast pass1(String program) {
+    public Ast pass1(String program) {
         Deque<String> tokens = tokenize(program);
         if (!tokens.removeFirst().equals("["))
             throw new IllegalArgumentException("Program must start with '['");
@@ -139,7 +139,7 @@ public class Compiler {
     /**
      * Returns an AST with constant expressions reduced
      */
-    public static Ast pass2(Ast ast) {
+    public Ast pass2(Ast ast) {
         if (ast instanceof BinOp binOp) {
             String op = ast.op();
             // process left
@@ -211,7 +211,7 @@ public class Compiler {
     /**
      * Returns assembly instructions
      */
-    public static List<String> pass3(Ast ast) {
+    public List<String> pass3(Ast ast) {
         List<String> code = new ArrayList<>();
         extractCodeFromAst(code, ast);
         return code;

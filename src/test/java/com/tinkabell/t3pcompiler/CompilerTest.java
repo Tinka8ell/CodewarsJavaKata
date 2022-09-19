@@ -220,4 +220,21 @@ public class CompilerTest {
         assertEquals("program(4,8,0) == 8", 8, Simulator.simulate(p3, 4, 8, 0));
         assertEquals("program(4,8,16) == 2", 2, Simulator.simulate(p3, 4, 8, 16));
     }
+
+    /**
+     * Order test:
+     * [ x y z ] x - y - z + 10 / 5 / 2 - 7 / 1 / 7 @ [5,4,1] expected:<0> but was:<-2>
+     */
+    @Test
+    public void testOrder() {
+        String program = "[ x y z ] x - y - z + 10 / 5 / 2 - 7 / 1 / 7";
+        Compiler compiler = new Compiler();
+
+        Ast p1 = compiler.pass1(program);
+
+        Ast p2 = compiler.pass2(p1);
+
+        List<String> p3 = compiler.pass3(p2);
+        assertEquals("program(5,4,1) == 0", 0, Simulator.simulate(p3, 5,4,1));
+    }
 }
