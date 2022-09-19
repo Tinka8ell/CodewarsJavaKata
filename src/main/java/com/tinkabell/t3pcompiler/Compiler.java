@@ -5,14 +5,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Compiler {
-    public List<String> compile(String program) {
+    public static List<String> compile(String program) {
         return pass3(pass2(pass1(program)));
     }
 
     /**
      * Returns an un-optimized AST
      */
-    public Ast pass1(String program) {
+    public static Ast pass1(String program) {
         Deque<String> tokens = tokenize(program);
         if (!tokens.removeFirst().equals("["))
             throw new IllegalArgumentException("Program must start with '['");
@@ -125,33 +125,6 @@ public class Compiler {
         while (!operatorStack.empty()) {
             pushAstOnOutputQueue(outputQueue, operatorStack);
         }
-        /*
-        if (token.equals("(")){ // start of bra & ket
-            // ignore bra and process next part
-            ast = getAst(tokens, parameters);
-            token = tokens.removeFirst(); // expect a ket
-            if (!token.equals(")"))
-                throw new IllegalArgumentException("Program unbalanced bra - no matching ket");
-        } else {
-            int number;
-            String command = "imm";
-            try {
-                number = Integer.parseInt(token);
-            } catch (NumberFormatException e) {
-                command = "arg";
-                number = parameters.get(token); // assume no invalid tokens!
-            }
-            ast = new UnOp(command, number);
-        }
-        // now check for binary operators or end of expression (ket or $)
-        String peek = tokens.peekFirst();
-        assert peek != null; // as we expect at least the end of token character
-        if (!peek.equals(")") && !peek.equals("$")){
-            // part of a binary operation
-            String binary = tokens.removeFirst(); // expect a '+', '-', '*' or '/'
-            ast = new BinOp(binary, ast, getAst(tokens, parameters));
-        }
-        */
         return outputQueue.pop(); // should be only thing left there
     }
 
@@ -166,15 +139,79 @@ public class Compiler {
     /**
      * Returns an AST with constant expressions reduced
      */
-    public Ast pass2(Ast ast) {
-        System.out.println("Pass2 not yet implemented");
+    public static Ast pass2(Ast ast) {
+        if (ast instanceof BinOp binOp) {
+            String op = ast.op();
+            // process left
+            Ast left = pass2(binOp.a());
+            // process right
+            Ast right = pass2(binOp.b());
+            // in case they were simplified
+            ast = new BinOp(op, left,right);
+            /*
+             * We can simplify if:
+             *    both operands numeric
+             *       apply operator to the two numbers and return result ast: UnOp('imm', result)
+             *    operator +:
+             *       if either operand is 0
+             *          return the other as the only ast
+             *    operator -:
+             *       if second operand is 0
+             *          return the first as the only ast
+             *    operator * or /:
+             *       if either operand is 0
+             *          return a zero ast: UnOp('imm', 0)
+             *    operator * or /:
+             *       if either operand is 1
+             *          return the other as the only ast
+             */
+            if (left instanceof UnOp leftUnOp && leftUnOp.op().equals("imm")) { // may be able to simplify
+                int leftNumber = leftUnOp.n();
+                if (right instanceof UnOp rightUnOp && rightUnOp.op().equals("imm")) { // yes we can simplify
+                    int rightNumber = rightUnOp.n();
+                    int result = 0;
+                    if (op.equals("+"))
+                        result = leftNumber + rightNumber;
+                    if (op.equals("-"))
+                        result = leftNumber - rightNumber;
+                    if (op.equals("*"))
+                        result = leftNumber * rightNumber;
+                    if (op.equals("/"))
+                        result = leftNumber / rightNumber;
+                    ast = new UnOp("imm", result);
+                } else if (leftNumber == 0) {
+                    if (op.equals("+") || op.equals("-")) {
+                        ast = right;
+                    } else { // must be * or /
+                        ast = new UnOp("imm", 0);
+                    }
+                } else if (leftNumber == 1) {
+                    if (op.equals("*")) {
+                        ast = right;
+                    }
+                }
+            } else if (right instanceof UnOp rightUnOp && rightUnOp.op().equals("imm")) { // may be able to simplify
+                int rightNumber = rightUnOp.n();
+                if (rightNumber == 0) {
+                    if (op.equals("+") || op.equals("-")) {
+                        ast = left;
+                    } else { // must be * as can't be / as div zero would be invalid!
+                        ast = new UnOp("imm", 0);
+                    }
+                } else if (rightNumber == 1) {
+                    if (op.equals("*") || op.equals("/")) {
+                        ast = left;
+                    }
+                }
+            }
+        }
         return ast;
     }
 
     /**
      * Returns assembly instructions
      */
-    public List<String> pass3(Ast ast) {
+    public static List<String> pass3(Ast ast) {
         List<String> code = new ArrayList<>();
         extractCodeFromAst(code, ast);
         return code;
