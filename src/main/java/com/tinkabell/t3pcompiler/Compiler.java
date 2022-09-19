@@ -96,6 +96,7 @@ public class Compiler {
                 }
                 ast = new UnOp(astOperator, number);
             }
+            //noinspection EnhancedSwitchMigration
             switch (tokenType) {
                 case -1: // number or parameter
                     outputQueue.push(ast);
