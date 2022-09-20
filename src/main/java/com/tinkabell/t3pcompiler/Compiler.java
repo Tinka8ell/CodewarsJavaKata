@@ -44,7 +44,10 @@ public class Compiler {
      * If not matched then return -1 as not operator.
      */
     private static int getTokenType(String token) {
-        return "()-+/*".indexOf(token);
+        int tokenType = "()-+/*".indexOf(token);
+        if (tokenType == 2) // - is really same level as +
+            tokenType++;
+        return tokenType;
     }
 
     /**

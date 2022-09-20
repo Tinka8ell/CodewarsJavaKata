@@ -6,6 +6,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
@@ -221,6 +222,47 @@ public class CompilerTest {
         assertEquals("program(4,8,16) == 2", 2, Simulator.simulate(p3, 4, 8, 16));
     }
 
+    @Test
+    public void testMinusOrder() {
+        Compiler compiler = new Compiler();
+        String program = "[ x y z ] x - y - z - 1 + 1";
+        // [ x y z ] ((((x - y) - z) - 1) + 1)
+
+        Ast t1 = new BinOp("+", new BinOp("-", new BinOp("-", new BinOp("-", new UnOp("arg", 0), new UnOp("arg", 1)), new UnOp("arg", 2)), new UnOp("imm", 1)), new UnOp("imm", 1));
+        Ast p1 = compiler.pass1(program);
+        assertEquals("Pass 1", t1, p1);
+
+        List<String> p3 = compiler.compile(program);
+        assertEquals("program(8,4,2) == 2", 2, Simulator.simulate(p3, 8,4,2));
+
+        program = "[ ] 8 - 4 - 2 - 1 + 1";
+
+        p3 = compiler.compile(program);
+        assertEquals("program()[] == 2", 2, Simulator.simulate(p3));
+    }
+
+    @Test
+    public void testDivOrder() {
+        Compiler compiler = new Compiler();
+        String program = "[ x y z ] x / y / z";
+
+        List<String> p3 = compiler.compile(program);
+        assertEquals("program(8,4,2) == 1", 1, Simulator.simulate(p3, 8,4,2));
+
+        program = "[ ] 8 / 4 / 2";
+
+        p3 = compiler.compile(program);
+        assertEquals("program()[8,4,2] == 1", 1, Simulator.simulate(p3));
+    }
+
+    @Test
+    public void testExtendedOrder() {
+        Compiler compiler = new Compiler();
+        String program = "[ a b ] a - b"; // + 10 / 5 / 2 - 7 / 1 / 7";
+
+        List<String> p3 = compiler.compile(program);
+        assertEquals("program() == 0", 3, Simulator.simulate(p3, 2, -1));
+    }
     /**
      * Order test:
      * [ x y z ] x - y - z + 10 / 5 / 2 - 7 / 1 / 7 @ [5,4,1] expected:<0> but was:<-2>
@@ -228,13 +270,22 @@ public class CompilerTest {
     @Test
     public void testOrder() {
         String program = "[ x y z ] x - y - z + 10 / 5 / 2 - 7 / 1 / 7";
+        // [ x y z ] x - y - z + 10 / 5 / 2 - 7 / 1 / 7
+        // [ x y z ] x - y - z + 2 / 2 - 7 / 7
+        // [ x y z ] x - y - z + 1 - 1
+        // [ x y z ] x - y - z
+        // @ [5,4,1] => 5 - 4 - 1 => expected:<0>
         Compiler compiler = new Compiler();
 
         Ast p1 = compiler.pass1(program);
+        System.out.println("P1 = " + p1);
 
         Ast p2 = compiler.pass2(p1);
+        System.out.println("P2 = " + p2);
 
         List<String> p3 = compiler.pass3(p2);
+        System.out.println("P3 = " + p3);
+
         assertEquals("program(5,4,1) == 0", 0, Simulator.simulate(p3, 5,4,1));
     }
 }
