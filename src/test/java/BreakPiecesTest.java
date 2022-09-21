@@ -5,6 +5,21 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BreakPiecesTest {
+
+    @Test
+    public void minimalTest() {
+        String shape = String.join("\n", new String[] {"+------------+",
+                "|            |",
+                "|            |",
+                "|            |",
+                "+------------+"});
+        String[] expected = {shape};
+        String[] actual = BreakPieces.process(shape);
+        Arrays.sort(expected);
+        Arrays.sort(actual);
+        assertArrayEquals(expected, actual);
+    }
+
     @Test
     public void simpleTest() {
         String shape = String.join("\n", new String[] {"+------------+",
