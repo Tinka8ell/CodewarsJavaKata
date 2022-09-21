@@ -31,6 +31,6 @@ public class BreakPiecesTest {
         String[] actual = BreakPieces.process(shape);
         Arrays.sort(expected);
         Arrays.sort(actual);
-        assertEquals(expected, actual);
+        assertArrayEquals(expected, actual);
     }
 }
