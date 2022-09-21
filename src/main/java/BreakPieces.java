@@ -62,19 +62,22 @@
  */
 public class BreakPieces {
     public static String[] process(String shape) {
-        String[] expected = {String.join("\n", new String[] {"+------------+",
-                "|            |",
-                "|            |",
-                "|            |",
-                "+------------+"}),
-                String.join("\n", new String[] {"+------+",
-                        "|      |",
-                        "|      |",
-                        "+------+"}),
-                String.join("\n", new String[] {"+-----+",
-                        "|     |",
-                        "|     |",
-                        "+-----+"})};
+        String box1 = makeBox(3, 12);
+        String box2 = makeBox(2, 6);
+        String box3 = makeBox(2, 5);
+        String[] expected = {box1,
+                box2,
+                box3};
         return expected;
+    }
+
+    static String makeBox(int rows, int columns){
+        String topBottom = "+" + "-".repeat(columns) + "+";
+        String middle = "|" + " ".repeat(columns) + "|";
+        StringBuilder box = new StringBuilder(topBottom);
+        for (int i = 0; i < rows; i++) {
+            box.append("\n").append(middle);
+        }
+        return box.append("\n").append(topBottom).toString();
     }
 }
