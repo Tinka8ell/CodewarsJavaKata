@@ -44,6 +44,11 @@ public class BreakPiecesTest {
                         "|     |",
                         "+-----+"})};
         String[] actual = BreakPieces.process(shape);
+        assertNotNull(actual);
+        System.out.println("Boxes: " + actual.length);
+        for (String box: actual) {
+            System.out.println(box);
+        }
         Arrays.sort(expected);
         Arrays.sort(actual);
         assertArrayEquals(expected, actual);

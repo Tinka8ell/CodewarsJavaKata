@@ -1,3 +1,9 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * You are given an ASCII diagram, comprised of minus signs -, plus signs +, vertical bars | and whitespaces.
  * Your task is to write a function which breaks the diagram in the minimal pieces it is made of.
@@ -61,17 +67,125 @@
  * </p>
  */
 public class BreakPieces {
+
+    public static final Pattern SPACES = Pattern.compile(" +");
+
     public static String[] process(String shape) {
-        String box1 = makeBox(3, 12);
-        String box2 = makeBox(2, 6);
-        String box3 = makeBox(2, 5);
-        String[] expected = {box1,
-                box2,
-                box3};
-        return expected;
+        List<List<Section>> sections = toLines(shape);
+        System.out.println(sections.size() + " lines:");
+        List<BoxSection> boxSections = new ArrayList<>();
+        List<BoxSection> current = new ArrayList<>();
+        for (List<Section> line: sections) {
+            System.out.println(line);
+            List<BoxSection> next = new ArrayList<>();
+            for (Section section: line) {
+                boolean matched = false;
+                for (BoxSection box: current) {
+                    matched = box.matchAndAdd(section);
+                    if (matched){
+                        next.add(box);
+                        current.remove(box);
+                        break;
+                    }
+                }
+                if (!matched){
+                    next.add(new BoxSection(section));
+                }
+            }
+            boxSections.addAll(current);
+            current = next;
+        }
+        boxSections.addAll(current);
+        System.out.println(boxSections.size() + " boxes:");
+        String[] boxes = new String[boxSections.size()];
+        for (int i = 0; i < boxes.length; i++) {
+            BoxSection box = boxSections.get(i);
+            System.out.println(box);
+            boxes[i] = makeBox(box);
+        }
+
+        return boxes;
     }
 
-    static String makeBox(int rows, int columns){
+    private static List<List<Section>> toLines(String shape) {
+        String[] stringLines = shape.split("\n");
+        List<List<Section>> lines = new ArrayList<>();
+        for (String line: stringLines) {
+            List<Section> intLine = new ArrayList<>();
+            Matcher matcher = SPACES.matcher(line);
+            while (matcher.find()){
+                int start = matcher.start();
+                intLine.add(new Section(start, matcher.end()));
+            }
+            lines.add(intLine);
+        }
+        return lines;
+    }
+
+    private static class Section {
+        public int start;
+        public int length;
+
+        public Section(int start, int end) {
+            this.start = start;
+            this.length = end - start;
+        }
+
+        @Override
+        public String toString() {
+            return "{" + start + ", " + length + '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof Section section)) return false;
+            return start == section.start && length == section.length;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(start, length);
+        }
+    }
+
+    private static class BoxSection {
+        public int rows;
+        public Section section;
+
+        public BoxSection(Section section) {
+            this.rows = 1;
+            this.section = section;
+        }
+
+        public boolean matchAndAdd(Section section){
+            boolean pass = this.section.equals(section);
+            if (pass)
+                rows++;
+            return pass;
+        }
+
+        @Override
+        public String toString() {
+            return "[" + rows + ", " + section + ']';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof BoxSection that)) return false;
+            return rows == that.rows && Objects.equals(section, that.section);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(rows, section);
+        }
+    }
+
+    static String makeBox(BoxSection boxSection){
+        int rows = boxSection.rows;
+        int columns = boxSection.section.length;
         String topBottom = "+" + "-".repeat(columns) + "+";
         String middle = "|" + " ".repeat(columns) + "|";
         StringBuilder box = new StringBuilder(topBottom);
