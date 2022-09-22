@@ -147,29 +147,39 @@ public class BreakPieces {
         public int hashCode() {
             return Objects.hash(start, length);
         }
+
+        public boolean overlaps(Section section) {
+            int end = start + length;
+            int sectionEnd = section.start + section.length;
+            return ((section.start >= start && section.start < end) ||
+                    (sectionEnd > start && sectionEnd <= end));
+        }
     }
 
     private static class BoxSection {
-        public int rows;
-        public Section section;
+        public List<Section> rows;
+        public Section last;
 
         public BoxSection(Section section) {
-            this.rows = 1;
-            this.section = section;
+            rows = new ArrayList<>();
+            last = section;
+            rows.add(last);
         }
 
         public boolean matchAndAdd(Section section){
-            boolean pass = this.section.equals(section);
-            if (pass)
-                rows++;
+            boolean pass = last.overlaps(section);
+            if (pass) {
+                last = section;
+                rows.add(last);
+            }
             return pass;
         }
 
         @Override
         public String toString() {
-            return "[" + rows + ", " + section + ']';
+            return "[" + rows + ']';
         }
-
+/*
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
@@ -181,17 +191,98 @@ public class BreakPieces {
         public int hashCode() {
             return Objects.hash(rows, section);
         }
+*/
     }
 
     static String makeBox(BoxSection boxSection){
-        int rows = boxSection.rows;
-        int columns = boxSection.section.length;
-        String topBottom = "+" + "-".repeat(columns) + "+";
-        String middle = "|" + " ".repeat(columns) + "|";
-        StringBuilder box = new StringBuilder(topBottom);
-        for (int i = 0; i < rows; i++) {
-            box.append("\n").append(middle);
+        int left = boxSection
+                .rows
+                .stream()
+                .map(r -> r.start)
+                .min(Integer::compareTo)
+                .orElse(0);
+        StringBuilder box = new StringBuilder();
+        int previousBefore = 0; // Integer.MAX_VALUE;
+        int previousAfter = 0;
+        int currentBefore = 0; // Integer.MAX_VALUE;
+        int currentAfter = 0;
+        int nextBefore = 0; // Integer.MAX_VALUE;
+        int nextAfter = 0;
+        for (Section row: boxSection.rows) {
+            nextBefore = row.start - left;
+            nextAfter = nextBefore + row.length;
+            box
+                    .append(drawRow(
+                            previousBefore, previousAfter,
+                            currentBefore, currentAfter,
+                            nextBefore, nextAfter))
+                    .append("\n");
+            previousAfter = currentAfter;
+            previousBefore = currentBefore;
+            currentAfter = nextAfter;
+            currentBefore = nextBefore;
         }
-        return box.append("\n").append(topBottom).toString();
+        // add last row
+        box
+                .append(drawRow(
+                        previousBefore, previousAfter,
+                        currentBefore, currentAfter,
+                        nextBefore, nextAfter))
+                .append("\n");
+        previousAfter = currentAfter;
+        previousBefore = currentBefore;
+        currentAfter = 0;
+        currentBefore = 0;
+        // and border
+        box
+                .append(drawRow(
+                        previousBefore, previousAfter,
+                        currentBefore, currentAfter,
+                        nextBefore, nextAfter));
+        return box.toString();
+    }
+
+    private static String drawRow(
+            int previousBefore, int previousAfter,
+            int currentBefore, int currentAfter,
+            int nextBefore, int nextAfter) {
+        int indent = currentBefore;
+        String prefix = "";
+        String before = "|";
+        int width = currentAfter - currentBefore;
+        String after = "|";
+        String suffix = "";
+        if (previousBefore < currentBefore){
+            indent = previousBefore;
+            prefix = "+" + "-".repeat(currentBefore - previousBefore);
+            before = "+";
+        } else if (currentBefore < nextBefore) {
+            indent = nextBefore;
+            prefix = "+" + "-".repeat(currentBefore - nextBefore);
+            before = "+";
+        }
+        if (previousAfter > currentAfter){
+            suffix = "-".repeat(previousAfter - currentAfter) + "+";
+            after = "+";
+        } else if (nextAfter > currentAfter) {
+            suffix = "-".repeat(nextAfter - currentAfter) + "+";
+            after = "+";
+        }
+        if (width <= 0){
+            before = "";
+            after = "";
+            if (suffix.length() > 0)
+                after = "+";
+            if (prefix.length() > 0)
+                before = "+";
+        }
+        String row = " ".repeat(indent) +
+                prefix +
+                before +
+                " ".repeat(width) +
+                after +
+                suffix;
+        System.out.println("Row: " + row);
+        return row;
     }
 }
