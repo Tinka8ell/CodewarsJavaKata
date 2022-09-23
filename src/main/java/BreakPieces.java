@@ -71,12 +71,11 @@ public class BreakPieces {
     public static final Pattern SPACES = Pattern.compile(" +");
 
     public static String[] process(String shape) {
+        // System.out.println("input shape:\n" + shape);
         List<List<Section>> sections = toLines(shape);
-        System.out.println(sections.size() + " lines:");
         List<BoxSection> boxSections = new ArrayList<>();
         List<BoxSection> current = new ArrayList<>();
         for (List<Section> line: sections) {
-            System.out.println(line);
             List<BoxSection> next = new ArrayList<>();
             for (Section section: line) {
                 boolean matched = false;
@@ -96,14 +95,11 @@ public class BreakPieces {
             current = next;
         }
         boxSections.addAll(current);
-        System.out.println(boxSections.size() + " boxes:");
         String[] boxes = new String[boxSections.size()];
         for (int i = 0; i < boxes.length; i++) {
             BoxSection box = boxSections.get(i);
-            System.out.println(box);
             boxes[i] = makeBox(box);
         }
-
         return boxes;
     }
 
@@ -115,8 +111,14 @@ public class BreakPieces {
             Matcher matcher = SPACES.matcher(line);
             while (matcher.find()){
                 int start = matcher.start();
-                intLine.add(new Section(start, matcher.end()));
+                int end = matcher.end();
+                if (start > 0 && // unless it's just an indent!
+                    end < line.length()) // or trailing spaces
+                {
+                    intLine.add(new Section(start, end));
+                }
             }
+            // System.out.println(intLine);
             lines.add(intLine);
         }
         return lines;
@@ -179,22 +181,11 @@ public class BreakPieces {
         public String toString() {
             return "[" + rows + ']';
         }
-/*
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof BoxSection that)) return false;
-            return rows == that.rows && Objects.equals(section, that.section);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(rows, section);
-        }
-*/
     }
 
     static String makeBox(BoxSection boxSection){
+        // System.out.println("output box");
+        // System.out.println(boxSection);
         int left = boxSection
                 .rows
                 .stream()
@@ -202,13 +193,14 @@ public class BreakPieces {
                 .min(Integer::compareTo)
                 .orElse(0);
         StringBuilder box = new StringBuilder();
-        int previousBefore = 0; // Integer.MAX_VALUE;
+        int previousBefore = Integer.MAX_VALUE;
         int previousAfter = 0;
-        int currentBefore = 0; // Integer.MAX_VALUE;
+        int currentBefore = Integer.MAX_VALUE;
         int currentAfter = 0;
-        int nextBefore = 0; // Integer.MAX_VALUE;
+        int nextBefore = Integer.MAX_VALUE;
         int nextAfter = 0;
         for (Section row: boxSection.rows) {
+            // System.out.println(row);
             nextBefore = row.start - left;
             nextAfter = nextBefore + row.length;
             box
@@ -246,43 +238,39 @@ public class BreakPieces {
             int previousBefore, int previousAfter,
             int currentBefore, int currentAfter,
             int nextBefore, int nextAfter) {
+        /*
+        System.out.println(Arrays.toString(new int[]{
+                previousBefore, previousAfter,
+                currentBefore, currentAfter,
+                nextBefore, nextAfter}));
+         */
         int indent = currentBefore;
-        String prefix = "";
-        String before = "|";
+        int prefix = 0;
         int width = currentAfter - currentBefore;
-        String after = "|";
-        String suffix = "";
-        if (previousBefore < currentBefore){
-            indent = previousBefore;
-            prefix = "+" + "-".repeat(currentBefore - previousBefore);
-            before = "+";
-        } else if (currentBefore < nextBefore) {
-            indent = nextBefore;
-            prefix = "+" + "-".repeat(currentBefore - nextBefore);
-            before = "+";
+        int suffix = 0;
+        if (width < 0){ // first line
+            indent = currentAfter = currentBefore = previousBefore = nextBefore;
+            width = 0;
+            previousAfter = nextAfter;
         }
-        if (previousAfter > currentAfter){
-            suffix = "-".repeat(previousAfter - currentAfter) + "+";
-            after = "+";
-        } else if (nextAfter > currentAfter) {
-            suffix = "-".repeat(nextAfter - currentAfter) + "+";
-            after = "+";
+        int left = Math.min(previousBefore, nextBefore);
+        if (left < currentBefore){
+            indent = left;
+            prefix = currentBefore - left;
         }
-        if (width <= 0){
-            before = "";
-            after = "";
-            if (suffix.length() > 0)
-                after = "+";
-            if (prefix.length() > 0)
-                before = "+";
+        int right = Math.max(previousAfter, nextAfter);
+        if (right > currentAfter) {
+            suffix = right - currentAfter;
         }
+        if (suffix > 0 && width == 0)
+            suffix ++;
         String row = " ".repeat(indent) +
-                prefix +
-                before +
+                (prefix > 0 ? "+" : (width > 0 ? "|" : "") ) +
+                (prefix > 1 ? "-".repeat(prefix - 1) + "+" : "") +
                 " ".repeat(width) +
-                after +
-                suffix;
-        System.out.println("Row: " + row);
+                (suffix > 1 ? "+" + "-".repeat(suffix - 1) : "") +
+                (suffix > 0 ? "+" : (width > 0 ? "|" : "") );
+        // System.out.println(row);
         return row;
     }
 }
